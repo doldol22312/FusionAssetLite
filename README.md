@@ -20,7 +20,7 @@ Other exporters and older Clickteam formats may need more readers.
 ## Requirements
 
 - Windows
-- .NET 8 SDK or newer
+- .NET 8 SDK or newer (if bulding from source)
 
 ## Build
 
