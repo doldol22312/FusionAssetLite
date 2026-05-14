@@ -1168,20 +1168,43 @@ internal sealed class SoundAsset
 
     public string GetExtension()
     {
-        if (Data.Length >= 4)
+        if (Data.Length < 4)
+            return "bin";
+
+        string header = Encoding.ASCII.GetString(Data, 0, 4);
+        if (header == "RIFF")
+            return "wav";
+        if (header == "FORM")
+            return "aiff";
+        if (header == "OggS")
+            return "ogg";
+        if (Data[0] == 'I' && Data[1] == 'D' && Data[2] == '3')
+            return "mp3";
+        if (Data.Length >= 2 && Data[0] == 0xFF && (Data[1] & 0xE0) == 0xE0)
+            return "mp3";
+        if (header == "IMPM")
+            return "it";
+        if (Data.Length >= 17 && Encoding.ASCII.GetString(Data, 0, 17) == "Extended Module: ")
+            return "xm";
+        if (Data.Length > 0x2F &&
+            Data[0x2C] == 'S' && Data[0x2D] == 'C' && Data[0x2E] == 'R' && Data[0x2F] == 'M')
+            return "s3m";
+        if (Data.Length > 0x43B)
         {
-            string header = Encoding.ASCII.GetString(Data, 0, 4);
-            return header switch
-            {
-                "RIFF" => "wav",
-                "AIFF" => "aiff",
-                "OggS" => "ogg",
-                _ => "mod"
-            };
+            string modSignature = Encoding.ASCII.GetString(Data, 0x438, 4);
+            if (ModSignatures.Contains(modSignature))
+                return "mod";
         }
 
         return "bin";
     }
+
+    private static readonly HashSet<string> ModSignatures = new(StringComparer.Ordinal)
+    {
+        "2CHN", "M.K.", "6CHN", "8CHN", "10CH", "12CH", "14CH", "16CH",
+        "18CH", "20CH", "22CH", "24CH", "26CH", "28CH", "30CH", "32CH",
+        "M!K!", "FLT4", "OCTA"
+    };
 }
 
 internal sealed class ShaderAsset
