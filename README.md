@@ -55,7 +55,3 @@ Example:
 ```powershell
 .\src\FusionAssetLite\bin\Release\net8.0-windows\FusionAssetLite.exe "Game.exe" ".\out" --no-shaders
 ```
-
-## Notes
-
-Use this only on games and assets you own or have permission to inspect.
