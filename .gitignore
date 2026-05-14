@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.nupkg
+
+# Local extraction output
+Dumps/
+extracted_assets*/
+*.exe
+*.ccn
+*.dat
+*.mfa
