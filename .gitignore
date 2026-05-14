@@ -5,6 +5,7 @@ obj/
 *.user
 *.suo
 *.nupkg
+dist/
 
 # Local extraction output
 Dumps/

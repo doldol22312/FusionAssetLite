@@ -20,7 +20,9 @@ Other exporters and older Clickteam formats may need more readers.
 ## Requirements
 
 - Windows
-- .NET 8 SDK or newer (if bulding from source)
+- .NET 8 SDK or newer (if building from source)
+
+Prebuilt self-contained releases do not require users to install .NET.
 
 ## Build
 
@@ -40,6 +42,19 @@ The output folder will contain subfolders like:
 - `Sounds`
 - `Packed Data`
 - `Shaders`
+
+## Memory Usage
+
+Measured on `Five Nights at Candy's 3.exe`, a 509 MB Windows Fusion 2.5 game:
+
+| Tool | Peak RAM | Result |
+| --- | ---: | --- |
+| CTFAK | ~7 GB | Dumped assets, but used excessive RAM |
+| NebulaFD | ~6.8 GB | Dumped assets after local sequential-dump patches |
+| FusionAssetLite | 136 MB | Dumped the same 3270 images, 138 sounds, packed data, and shaders |
+
+FusionAssetLite stays lower because it streams large asset banks from the game
+file and decodes one asset at a time instead of loading the whole game model.
 
 ## Options
 
