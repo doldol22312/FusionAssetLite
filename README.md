@@ -49,7 +49,7 @@ Measured on `Five Nights at Candy's 3.exe`, a 509 MB Windows Fusion 2.5 game:
 
 | Tool | Peak RAM | Dump Time | Result |
 | --- | ---: | ---: | --- |
-| CTFAK | ~7 GB | Not measured | Dumped assets, but used excessive RAM |
+| CTFAK | ~8.7 GB | 46s | Dumped assets, but used excessive RAM |
 | NebulaFD | ~6.8 GB | ~2m 12s | Dumped assets after local sequential-dump patches |
 | FusionAssetLite | 136 MB | 47s | Dumped the same 3270 images, 138 sounds, packed data, and shaders |
 
