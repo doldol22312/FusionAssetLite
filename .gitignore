@@ -6,6 +6,7 @@ obj/
 *.suo
 *.nupkg
 dist/
+tools/
 
 # Local extraction output
 Dumps/

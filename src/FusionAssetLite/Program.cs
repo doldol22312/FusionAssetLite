@@ -12,7 +12,10 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        if (args.Length == 0 || args.Contains("--help") || args.Contains("-h"))
+        static bool HasArg(string[] values, string value) =>
+            values.Any(arg => string.Equals(arg, value, StringComparison.OrdinalIgnoreCase));
+
+        if (args.Length == 0 || HasArg(args, "--help") || HasArg(args, "-h"))
         {
             Console.WriteLine("Usage: FusionAssetLite <game.exe|game.ccn> [output-root] [--no-images] [--no-sounds] [--no-pack] [--no-shaders]");
             return args.Length == 0 ? 1 : 0;
@@ -25,16 +28,17 @@ internal static class Program
             return 1;
         }
 
-        string outputRoot = args.Length > 1 && !args[1].StartsWith("--", StringComparison.Ordinal)
-            ? Path.GetFullPath(args[1])
+        string? outputArg = args.Skip(1).FirstOrDefault(arg => !arg.StartsWith("-", StringComparison.Ordinal));
+        string outputRoot = outputArg != null
+            ? Path.GetFullPath(outputArg)
             : Path.Combine(Path.GetDirectoryName(inputPath)!, "extracted_assets_lite");
 
         DumperOptions options = new()
         {
-            DumpImages = !args.Contains("--no-images"),
-            DumpSounds = !args.Contains("--no-sounds"),
-            DumpPackData = !args.Contains("--no-pack"),
-            DumpShaders = !args.Contains("--no-shaders")
+            DumpImages = !HasArg(args, "--no-images"),
+            DumpSounds = !HasArg(args, "--no-sounds"),
+            DumpPackData = !HasArg(args, "--no-pack"),
+            DumpShaders = !HasArg(args, "--no-shaders")
         };
 
         try
@@ -61,6 +65,27 @@ internal sealed class DumperOptions
 
 internal sealed class FusionAssetDumper
 {
+    private const uint MagicPame = 0x454D4150; // "PAME"
+    private const uint MagicPamu = 0x554D4150; // "PAMU"
+    private const uint MagicPackData = 0x77777777;
+    private const ushort LegacyLastChunk = 0x7F7F;
+    private const ushort LegacyAltChunk = 0x222C;
+    private const ushort ChunkAppName = 0x2224;
+    private const ushort ChunkShaders = 0x2243;
+    private const ushort ChunkExtendedHeader = 0x2245;
+    private const ushort ChunkShadersAlt = 0x225A;
+    private const ushort ChunkPlus = 0x2253;
+    private const ushort ChunkImageBank = 0x6666;
+    private const ushort ChunkSoundBank = 0x6668;
+    private const ushort ChunkSeeded = 0x7EEE;
+    private const ushort ChunkLast = 0x7F7F;
+    private const int MaxPackFiles = 100_000;
+    private const int MaxImages = 1_000_000;
+    private const int MaxSounds = 100_000;
+    private const int MaxShaders = 10_000;
+    private const int MaxNameLength = 4096;
+    private const int MaxShaderSourceBytes = 16 * 1024 * 1024;
+
     private readonly string _inputPath;
     private readonly string _outputRoot;
     private readonly DumperOptions _options;
@@ -84,8 +109,11 @@ internal sealed class FusionAssetDumper
     private int _imagesWritten;
     private int _imageFailures;
     private int _soundsWritten;
+    private int _soundFailures;
     private int _packFilesWritten;
+    private int _packFailures;
     private int _shaderFilesWritten;
+    private int _shaderFailures;
     private readonly Dictionary<byte, int> _imageModes = new();
     private readonly HashSet<string> _usedPaths = new(StringComparer.OrdinalIgnoreCase);
 
@@ -119,15 +147,16 @@ internal sealed class FusionAssetDumper
         }
 
         ReadPackDataIfPresent(reader);
+        SeekToPackageHeaderIfNeeded(reader);
         ReadPackage(reader);
 
         Console.WriteLine();
         Console.WriteLine("Done.");
         Console.WriteLine($"Output: {_dumpDir}");
         Console.WriteLine($"Images: {_imagesWritten} written, {_imageFailures} failed");
-        Console.WriteLine($"Sounds: {_soundsWritten} written");
-        Console.WriteLine($"Packed data: {_packFilesWritten} written");
-        Console.WriteLine($"Shader files: {_shaderFilesWritten} written");
+        Console.WriteLine($"Sounds: {_soundsWritten} written, {_soundFailures} failed");
+        Console.WriteLine($"Packed data: {_packFilesWritten} written, {_packFailures} failed");
+        Console.WriteLine($"Shader files: {_shaderFilesWritten} written, {_shaderFailures} failed");
         if (_imageModes.Count > 0)
             Console.WriteLine("Image modes: " + string.Join(", ", _imageModes.OrderBy(x => x.Key).Select(x => $"{x.Key}={x.Value}")));
         Console.WriteLine($"Elapsed: {_timer.Elapsed:mm\\:ss}");
@@ -147,35 +176,51 @@ internal sealed class FusionAssetDumper
         if (BinaryText.ReadAscii(reader, 2) != "MZ")
             return 0;
 
-        stream.Position = 60;
-        ushort peHeader = reader.ReadUInt16();
-        stream.Position = peHeader + 6;
-        ushort sectionCount = reader.ReadUInt16();
-        stream.Seek(240, SeekOrigin.Current);
+        if (stream.Length < 0x40)
+            throw new InvalidDataException("EXE is too small to contain a PE header.");
 
-        uint position = 0;
-        uint relocFallback = 0;
+        stream.Position = 0x3C;
+        uint peHeader = reader.ReadUInt32();
+        if (peHeader > stream.Length - 24)
+            throw new InvalidDataException($"Invalid PE header offset 0x{peHeader:X}.");
+
+        stream.Position = peHeader;
+        if (BinaryText.ReadAscii(reader, 4) != "PE")
+            throw new InvalidDataException($"Missing PE signature at 0x{peHeader:X}.");
+
+        _ = reader.ReadUInt16(); // machine
+        ushort sectionCount = reader.ReadUInt16();
+        stream.Seek(12, SeekOrigin.Current);
+        ushort optionalHeaderSize = reader.ReadUInt16();
+        stream.Seek(2, SeekOrigin.Current);
+
+        long sectionTable = peHeader + 4 + 20 + optionalHeaderSize;
+        long sectionTableEnd = sectionTable + sectionCount * 40L;
+        if (sectionTableEnd > stream.Length)
+            throw new InvalidDataException("PE section table extends past end of file.");
+
+        stream.Position = sectionTable;
+
+        long payloadOffset = 0;
         for (int i = 0; i < sectionCount; i++)
         {
-            string sectionName = BinaryText.ReadAsciiStop(reader, 8);
-            stream.Seek(8, SeekOrigin.Current);
-            uint sectionStart = reader.ReadUInt32();
-            uint sectionSize = reader.ReadUInt32();
+            stream.Seek(16, SeekOrigin.Current);
+            uint sizeOfRawData = reader.ReadUInt32();
+            uint pointerToRawData = reader.ReadUInt32();
             stream.Seek(16, SeekOrigin.Current);
 
-            if (position == 0)
-                position = sectionStart + sectionSize;
-            else
-                position += sectionStart;
+            if (sizeOfRawData == 0)
+                continue;
 
-            if (sectionName == ".reloc")
-                relocFallback = sectionStart + sectionSize;
+            long sectionEnd = pointerToRawData + (long)sizeOfRawData;
+            if (sectionEnd <= stream.Length)
+                payloadOffset = Math.Max(payloadOffset, sectionEnd);
         }
 
-        if (position >= stream.Length && relocFallback != position && relocFallback != 0)
-            return relocFallback;
+        if (payloadOffset <= 0 || payloadOffset >= stream.Length)
+            throw new InvalidDataException("Could not locate a Fusion payload after PE sections.");
 
-        return position;
+        return payloadOffset;
     }
 
     private void ReadPackDataIfPresent(BinaryReader reader)
@@ -183,42 +228,46 @@ internal sealed class FusionAssetDumper
         if (!reader.HasBytes(4))
             return;
 
-        int marker = reader.PeekInt32();
-        if (marker is 1162690896 or 1431126352) // PAME/PAMU
+        uint marker = reader.PeekUInt32();
+        if (marker is MagicPame or MagicPamu)
             return;
 
-        if (marker == 2004318071)
+        if (marker == MagicPackData)
         {
             reader.BaseStream.Seek(28, SeekOrigin.Current);
         }
-        else if (marker is 32639 or 8748)
+        else if ((marker & 0xFFFF) is LegacyLastChunk or LegacyAltChunk)
         {
-            if (reader.GetAsciiAt(4, 4) == "I\u0087G\u0012")
+            if (reader.MatchesBytesAt(4, 0x49, 0x87, 0x47, 0x12))
                 reader.BaseStream.Seek(28, SeekOrigin.Current);
             else
             {
                 _fusion = 1.5f;
                 _unicode = false;
+                Console.WriteLine("PackData: legacy format not implemented in lite mode, skipping.");
+                return;
             }
         }
-        else if ((short)(marker & 0xFFFF) == 1)
+        else if ((ushort)(marker & 0xFFFF) == 1)
         {
             _fusion = 1.1f;
             _unicode = false;
+            Console.WriteLine("PackData: legacy format not implemented in lite mode, skipping.");
+            return;
         }
         else
         {
-            reader.BaseStream.Seek(28, SeekOrigin.Current);
-        }
-
-        if (_fusion <= 1.5f)
-        {
-            Console.WriteLine("PackData: legacy format not implemented in lite mode, skipping.");
+            Console.WriteLine("PackData: none detected");
             return;
         }
 
         uint count = reader.ReadUInt32();
+        if (count > MaxPackFiles)
+            throw new InvalidDataException($"PackData file count out of range: {count}");
+
         Console.WriteLine($"PackData: {count} files");
+        if (count > 0)
+            _unicode = DetectLengthPrefixedStringUnicode(reader);
 
         string packDir = Path.Combine(_dumpDir, "Packed Data");
         if (_options.DumpPackData)
@@ -226,23 +275,107 @@ internal sealed class FusionAssetDumper
 
         for (uint i = 0; i < count; i++)
         {
-            short nameLength = reader.ReadInt16();
-            string name = ReadUniversal(reader, nameLength);
-            _ = reader.ReadInt32();
-            int dataSize = reader.ReadInt32();
-            byte[] data = reader.ReadBytesExact(dataSize);
-
-            if (data.Length >= 2 && data[0] == 0x78 && data[1] == 0xDA)
-                data = Compression.DecompressBlock(data);
-
-            if (_options.DumpPackData)
+            try
             {
+                int nameLength = ValidateLength(reader.ReadInt16(), "PackData name");
+                string name = ReadUniversal(reader, nameLength);
+                _ = reader.ReadInt32();
+                int dataSize = ValidateRemainingSize(reader, reader.ReadInt32(), "PackData file");
+
+                if (!_options.DumpPackData)
+                {
+                    reader.SkipBytesExact(dataSize);
+                    continue;
+                }
+
+                byte[] data = reader.ReadBytesExact(dataSize);
+                if (Compression.IsZlib(data))
+                    data = Compression.DecompressBlock(data);
+
                 string outPath = UniquePath(Path.Combine(packDir, Sanitizer.RelativePath(name)));
                 Directory.CreateDirectory(Path.GetDirectoryName(outPath)!);
                 File.WriteAllBytes(outPath, data);
                 _packFilesWritten++;
             }
+            catch (Exception ex)
+            {
+                _packFailures++;
+                Console.WriteLine($"PackData file {i:D5} failed: {ex.Message}");
+                if (!reader.HasBytes(1))
+                    break;
+            }
         }
+    }
+
+    private static bool DetectLengthPrefixedStringUnicode(BinaryReader reader)
+    {
+        long pos = reader.BaseStream.Position;
+        try
+        {
+            if (!reader.HasBytes(4))
+                return false;
+
+            short length = reader.ReadInt16();
+            return length > 0 && reader.HasBytes(2) && reader.BaseStream.ReadByte() >= 0 && reader.BaseStream.ReadByte() == 0;
+        }
+        finally
+        {
+            reader.BaseStream.Position = pos;
+        }
+    }
+
+    private void SeekToPackageHeaderIfNeeded(BinaryReader reader)
+    {
+        if (!reader.HasBytes(4))
+            return;
+
+        uint marker = reader.PeekUInt32();
+        if (marker is MagicPame or MagicPamu)
+            return;
+
+        long start = reader.BaseStream.Position;
+        long header = FindPackageHeader(reader.BaseStream, start);
+        if (header < 0)
+        {
+            reader.BaseStream.Position = start;
+            return;
+        }
+
+        reader.BaseStream.Position = header;
+        Console.WriteLine($"Package: skipped {header - start:N0} bytes to header at 0x{header:X}");
+    }
+
+    private static long FindPackageHeader(Stream stream, long start)
+    {
+        const int BufferSize = 1 << 20;
+        byte[] buffer = new byte[BufferSize + 3];
+        int overlap = 0;
+        stream.Position = start;
+
+        while (stream.Position < stream.Length)
+        {
+            long readStart = stream.Position - overlap;
+            int read = stream.Read(buffer, overlap, BufferSize);
+            if (read == 0)
+                break;
+
+            int total = overlap + read;
+            for (int i = 0; i <= total - 4; i++)
+            {
+                if (buffer[i] == (byte)'P' &&
+                    buffer[i + 1] == (byte)'A' &&
+                    buffer[i + 2] == (byte)'M' &&
+                    (buffer[i + 3] == (byte)'E' || buffer[i + 3] == (byte)'U'))
+                {
+                    return readStart + i;
+                }
+            }
+
+            overlap = Math.Min(3, total);
+            Array.Copy(buffer, total - overlap, buffer, 0, overlap);
+        }
+
+        return -1;
     }
 
     private void ReadPackage(BinaryReader reader)
@@ -266,8 +399,8 @@ internal sealed class FusionAssetDumper
         _unicode = header != "PAME";
         Console.WriteLine($"Package: {header}, Fusion {_fusion:0.0}, build {_build}");
 
-        bool pastLast = false;
-        while (reader.HasBytes(8) && !(pastLast && reader.PeekInt64() == 0))
+        bool stopAfterChunk = false;
+        while (reader.HasBytes(8) && !stopAfterChunk)
         {
             long chunkStart = reader.BaseStream.Position;
             short id = reader.ReadInt16();
@@ -283,32 +416,32 @@ internal sealed class FusionAssetDumper
             {
                 switch ((ushort)id)
                 {
-                    case 0x2224:
+                    case ChunkAppName:
                         ReadAppNameChunk(reader, size, flag);
                         break;
-                    case 0x2243 when _options.DumpShaders:
+                    case ChunkShaders when _options.DumpShaders:
                         ReadShaderBankChunk(reader, size, flag, "Shaders");
                         break;
-                    case 0x2245:
+                    case ChunkExtendedHeader:
                         ReadExtendedHeaderChunk(reader, size, flag);
                         break;
-                    case 0x225A when _options.DumpShaders:
+                    case ChunkShadersAlt when _options.DumpShaders:
                         ReadShaderBankChunk(reader, size, flag, "Shaders");
                         break;
-                    case 0x2253:
+                    case ChunkPlus:
                         _plus = true;
                         break;
-                    case 0x6666 when _options.DumpImages:
+                    case ChunkImageBank when _options.DumpImages:
                         DumpImageBank(reader, size, flag);
                         break;
-                    case 0x6668 when _options.DumpSounds:
+                    case ChunkSoundBank when _options.DumpSounds:
                         DumpSoundBank(reader, size, flag);
                         break;
-                    case 0x7EEE:
+                    case ChunkSeeded:
                         _seeded = true;
                         break;
-                    case 0x7F7F:
-                        pastLast = true;
+                    case ChunkLast:
+                        stopAfterChunk = true;
                         break;
                 }
             }
@@ -362,7 +495,7 @@ internal sealed class FusionAssetDumper
     {
         Console.WriteLine($"ImageBank: {(flag == 0 ? "streaming" : "buffered compressed chunk")}, {size:N0} bytes");
         using BinaryReader bank = OpenChunkReader(reader, size, flag);
-        int imageCount = (_android || _ios || _flash || _html) ? ReadMobileCount(bank) : bank.ReadInt32();
+        int imageCount = ValidateCount((_android || _ios || _flash || _html) ? ReadMobileCount(bank) : bank.ReadInt32(), "Image", MaxImages);
         string imageDir = Path.Combine(_dumpDir, "Images");
         Directory.CreateDirectory(imageDir);
 
@@ -410,11 +543,11 @@ internal sealed class FusionAssetDumper
     private LiteImage ReadImage25(BinaryReader reader)
     {
         uint rawHandle = reader.ReadUInt32();
-        uint handle = _build >= 284 ? rawHandle - 1 : rawHandle;
-        _ = reader.ReadInt32(); // decompressed size
-        int compressedSize = reader.ReadInt32();
+        uint handle = NormalizeHandle(rawHandle);
+        int decompressedSize = ValidateNonNegative(reader.ReadInt32(), "Image decompressed size");
+        int compressedSize = ValidateRemainingSize(reader, reader.ReadInt32(), "Image compressed data");
         byte[] compressed = reader.ReadBytesExact(compressedSize);
-        byte[] decompressed = Compression.DecompressBlock(compressed);
+        byte[] decompressed = Compression.DecompressBlock(compressed, decompressedSize);
 
         using MemoryStream ms = new(decompressed, writable: false);
         using BinaryReader imageReader = new(ms);
@@ -425,9 +558,10 @@ internal sealed class FusionAssetDumper
             References = imageReader.ReadInt32()
         };
 
-        int dataSize = imageReader.ReadInt32();
+        int dataSize = ValidateRemainingSize(imageReader, imageReader.ReadInt32(), "Image data");
         image.Width = imageReader.ReadInt16();
         image.Height = imageReader.ReadInt16();
+        ValidateImageDimensions(image.Width, image.Height);
         image.GraphicMode = imageReader.ReadByte();
         image.Flags = imageReader.ReadByte();
         imageReader.BaseStream.Seek(2, SeekOrigin.Current);
@@ -455,14 +589,15 @@ internal sealed class FusionAssetDumper
     {
         LiteImage image = new()
         {
-            Handle = reader.ReadUInt32() - 1,
+            Handle = NormalizeHandle(reader.ReadUInt32()),
             Checksum = reader.ReadInt32(),
             References = reader.ReadInt32()
         };
         reader.BaseStream.Seek(4, SeekOrigin.Current);
-        int dataSize = reader.ReadInt32();
+        int dataSize = ValidateRemainingSize(reader, reader.ReadInt32(), "Image data");
         image.Width = reader.ReadInt16();
         image.Height = reader.ReadInt16();
+        ValidateImageDimensions(image.Width, image.Height);
         image.GraphicMode = reader.ReadByte();
         image.Flags = reader.ReadByte();
         reader.BaseStream.Seek(2, SeekOrigin.Current);
@@ -472,10 +607,15 @@ internal sealed class FusionAssetDumper
         image.ActionPointY = reader.ReadInt16();
         image.TransparentColor = BinaryText.ReadColor(reader);
 
-        int decompressedSize = reader.ReadInt32();
+        int decompressedSize = ValidateImageBufferSize(reader.ReadInt32(), image.Width, image.Height);
+        if (dataSize < 4)
+            throw new InvalidDataException($"Optimized image data size out of range: {dataSize}");
+
         byte[] compressedImage = reader.ReadBytesExact(Math.Max(0, dataSize - 4));
         image.ImageData = new byte[decompressedSize];
-        LZ4Codec.Decode(compressedImage, image.ImageData);
+        int decoded = LZ4Codec.Decode(compressedImage, image.ImageData);
+        if (decoded != decompressedSize)
+            throw new InvalidDataException($"LZ4 image decoded {decoded} bytes, expected {decompressedSize}.");
         return image;
     }
 
@@ -520,20 +660,40 @@ internal sealed class FusionAssetDumper
     {
         Console.WriteLine($"SoundBank: {(flag == 0 ? "streaming" : "buffered compressed chunk")}, {size:N0} bytes");
         using BinaryReader bank = OpenChunkReader(reader, size, flag);
-        int count = (_android || _ios || _flash || _html) ? ReadMobileCount(bank) : bank.ReadInt32();
+        int count = ValidateCount((_android || _ios || _flash || _html) ? ReadMobileCount(bank) : bank.ReadInt32(), "Sound", MaxSounds);
+        if (_android || _ios || _flash || _html)
+        {
+            Console.WriteLine("SoundBank: mobile/Flash/HTML sound banks are not implemented in lite mode, skipping.");
+            return;
+        }
+
         string soundDir = Path.Combine(_dumpDir, "Sounds");
         Directory.CreateDirectory(soundDir);
 
         ProgressMeter progress = new("Sounds", count);
         for (int i = 0; i < count; i++)
         {
-            SoundAsset sound = ReadSound(bank);
-            string safeName = string.IsNullOrWhiteSpace(sound.Name) ? $"sound_{sound.Handle:D5}" : Sanitizer.FileName(sound.Name);
-            string ext = sound.GetExtension();
-            string outPath = UniquePath(Path.Combine(soundDir, $"{safeName}.{ext}"));
-            File.WriteAllBytes(outPath, sound.Data);
-            _soundsWritten++;
-            progress.Step(i + 1);
+            long soundStart = bank.BaseStream.Position;
+            try
+            {
+                SoundAsset sound = ReadSound(bank);
+                string safeName = string.IsNullOrWhiteSpace(sound.Name) ? $"sound_{sound.Handle:D5}" : Sanitizer.FileName(sound.Name);
+                string ext = sound.GetExtension();
+                string outPath = UniquePath(Path.Combine(soundDir, $"{safeName}.{ext}"));
+                File.WriteAllBytes(outPath, sound.Data);
+                _soundsWritten++;
+            }
+            catch (Exception ex)
+            {
+                _soundFailures++;
+                Console.WriteLine($"Sound {i:D5} failed: {ex.Message}");
+                if (bank.BaseStream.Position <= soundStart || !bank.HasBytes(1))
+                    break;
+            }
+            finally
+            {
+                progress.Step(i + 1);
+            }
         }
 
         progress.Done();
@@ -541,36 +701,31 @@ internal sealed class FusionAssetDumper
 
     private SoundAsset ReadSound(BinaryReader reader)
     {
-        if (_android || _ios || _flash || _html)
-            throw new NotSupportedException("Mobile/Flash/HTML sound banks are not implemented in lite mode.");
-
         SoundAsset sound = new();
         uint rawHandle = reader.ReadUInt32();
-        sound.Handle = _fusion >= 2.5f ? rawHandle - 1 : rawHandle;
+        sound.Handle = NormalizeHandle(rawHandle);
         sound.Checksum = reader.ReadInt32();
         sound.References = reader.ReadUInt32();
-        int decompressedSize = reader.ReadInt32();
+        int decompressedSize = ValidateNonNegative(reader.ReadInt32(), "Sound decompressed size");
         sound.Flags = reader.ReadUInt32();
         sound.Frequency = reader.ReadInt32();
-        int nameLength = reader.ReadInt32();
+        int nameLength = ValidateLength(reader.ReadInt32(), "Sound name");
 
         bool playFromDisk = BitFlag.IsSet(sound.Flags, 5);
         byte[] payload;
         if (!playFromDisk)
         {
-            int compressedSize = reader.ReadInt32();
-            payload = Compression.DecompressBlock(reader.ReadBytesExact(compressedSize));
+            int compressedSize = ValidateRemainingSize(reader, reader.ReadInt32(), "Sound compressed data");
+            payload = Compression.DecompressBlock(reader.ReadBytesExact(compressedSize), decompressedSize);
         }
         else
         {
-            payload = reader.ReadBytesExact(decompressedSize);
+            payload = reader.ReadBytesExact(ValidateRemainingSize(reader, decompressedSize, "Sound data"));
         }
 
         using MemoryStream ms = new(payload, writable: false);
         using BinaryReader soundReader = new(ms);
         sound.Name = ReadUniversalStop(soundReader, nameLength);
-        if (playFromDisk)
-            soundReader.BaseStream.Position = 0;
         sound.Data = soundReader.ReadBytesExact(checked((int)(soundReader.BaseStream.Length - soundReader.BaseStream.Position)));
 
         return sound;
@@ -583,7 +738,7 @@ internal sealed class FusionAssetDumper
             return;
 
         int count = chunk.ReadInt32();
-        if (count < 0 || count > 10000)
+        if (count < 0 || count > MaxShaders)
             return;
 
         int[] offsets = new int[count];
@@ -598,22 +753,33 @@ internal sealed class FusionAssetDumper
             if (offsets[i] == 0)
                 continue;
 
-            chunk.BaseStream.Position = offsets[i];
-            ShaderAsset shader = ReadShader(chunk, i);
-            if (shader.FxData.Length == 0)
-                continue;
+            try
+            {
+                if (offsets[i] < 0 || offsets[i] >= chunk.BaseStream.Length)
+                    throw new InvalidDataException($"Shader offset out of range: {offsets[i]}");
 
-            string baseName = Sanitizer.FileName(Path.GetFileNameWithoutExtension(shader.Name));
-            if (string.IsNullOrWhiteSpace(baseName))
-                baseName = $"shader_{i:D3}";
+                chunk.BaseStream.Position = offsets[i];
+                ShaderAsset shader = ReadShader(chunk, i);
+                if (shader.FxData.Length == 0)
+                    continue;
 
-            string fxPath = UniquePath(Path.Combine(shaderDir, baseName + (shader.Compiled ? ".fxc" : ".fx")));
-            File.WriteAllBytes(fxPath, shader.FxData);
-            _shaderFilesWritten++;
+                string baseName = Sanitizer.FileName(Path.GetFileNameWithoutExtension(shader.Name));
+                if (string.IsNullOrWhiteSpace(baseName))
+                    baseName = $"shader_{i:D3}";
 
-            string xmlPath = UniquePath(Path.Combine(shaderDir, baseName + ".xml"));
-            File.WriteAllText(xmlPath, shader.ToXml(), Encoding.UTF8);
-            _shaderFilesWritten++;
+                string fxPath = UniquePath(Path.Combine(shaderDir, baseName + (shader.Compiled ? ".fxc" : ".fx")));
+                File.WriteAllBytes(fxPath, shader.FxData);
+                _shaderFilesWritten++;
+
+                string xmlPath = UniquePath(Path.Combine(shaderDir, baseName + ".xml"));
+                File.WriteAllText(xmlPath, shader.ToXml(), Encoding.UTF8);
+                _shaderFilesWritten++;
+            }
+            catch (Exception ex)
+            {
+                _shaderFailures++;
+                Console.WriteLine($"Shader {i:D3} failed: {ex.Message}");
+            }
         }
     }
 
@@ -624,7 +790,7 @@ internal sealed class FusionAssetDumper
         int fxDataOffset = reader.ReadInt32();
         int parameterOffset = reader.ReadInt32();
         _ = reader.ReadInt32(); // options offset
-        int fxDataSize = reader.ReadInt32();
+        int fxDataSize = ValidateNonNegative(reader.ReadInt32(), "Shader data size");
 
         ShaderAsset shader = new() { Handle = index };
         if (_build >= 296 && Math.Abs(_fusion - 2.5f) < 0.01f)
@@ -633,25 +799,30 @@ internal sealed class FusionAssetDumper
         }
         else if (nameOffset != 0)
         {
-            reader.BaseStream.Position = start + nameOffset;
-            shader.Name = BinaryText.ReadAscii(reader);
+            SeekRelativeOffset(reader, start, nameOffset, "Shader name");
+            shader.Name = BinaryText.ReadAsciiZ(reader, MaxNameLength);
         }
 
         if (fxDataOffset != 0)
         {
-            reader.BaseStream.Position = start + fxDataOffset;
+            SeekRelativeOffset(reader, start, fxDataOffset, "Shader data");
             string header = BinaryText.ReadAscii(reader, 4);
             shader.Compiled = header == "DXBC";
             reader.BaseStream.Seek(-4, SeekOrigin.Current);
             if (shader.Compiled)
-                shader.FxData = reader.ReadBytesExact(Math.Max(0, fxDataSize - 1));
+            {
+                int byteCount = ValidateRemainingSize(reader, Math.Max(0, fxDataSize - 1), "Compiled shader data");
+                shader.FxData = reader.ReadBytesExact(byteCount);
+            }
             else
-                shader.FxData = Encoding.ASCII.GetBytes(BinaryText.ReadAscii(reader));
+            {
+                shader.FxData = Encoding.ASCII.GetBytes(BinaryText.ReadAsciiZ(reader, MaxShaderSourceBytes));
+            }
         }
 
         if (parameterOffset != 0)
         {
-            reader.BaseStream.Position = start + parameterOffset;
+            SeekRelativeOffset(reader, start, parameterOffset, "Shader parameters");
             int paramCount = reader.ReadInt32();
             if (paramCount is > 0 and < 1024)
             {
@@ -659,17 +830,87 @@ internal sealed class FusionAssetDumper
                 int nameOffset2 = reader.ReadInt32();
                 byte[] types = new byte[paramCount];
 
-                reader.BaseStream.Position = start + parameterOffset + typeOffset;
+                SeekRelativeOffset(reader, start + parameterOffset, typeOffset, "Shader parameter types");
                 for (int i = 0; i < paramCount; i++)
                     types[i] = reader.ReadByte();
 
-                reader.BaseStream.Position = start + parameterOffset + nameOffset2;
+                SeekRelativeOffset(reader, start + parameterOffset, nameOffset2, "Shader parameter names");
                 for (int i = 0; i < paramCount; i++)
-                    shader.Parameters.Add(new ShaderParameter(types[i], BinaryText.ReadAscii(reader)));
+                    shader.Parameters.Add(new ShaderParameter(types[i], BinaryText.ReadAsciiZ(reader, MaxNameLength)));
             }
         }
 
         return shader;
+    }
+
+    private uint NormalizeHandle(uint rawHandle) =>
+        _build >= 284 && rawHandle > 0 ? rawHandle - 1 : rawHandle;
+
+    private static int ValidateCount(int count, string label, int max)
+    {
+        if (count < 0 || count > max)
+            throw new InvalidDataException($"{label} count out of range: {count}");
+
+        return count;
+    }
+
+    private static int ValidateLength(int length, string label)
+    {
+        if (length < 0 || length > MaxNameLength)
+            throw new InvalidDataException($"{label} length out of range: {length}");
+
+        return length;
+    }
+
+    private static int ValidateNonNegative(int value, string label)
+    {
+        if (value < 0)
+            throw new InvalidDataException($"{label} is negative: {value}");
+
+        return value;
+    }
+
+    private static int ValidateRemainingSize(BinaryReader reader, int size, string label)
+    {
+        ValidateNonNegative(size, label);
+        if (!reader.HasBytes(size))
+            throw new EndOfStreamException($"{label} needs {size} bytes but only {reader.BaseStream.Length - reader.BaseStream.Position} remain.");
+
+        return size;
+    }
+
+    private static void ValidateImageDimensions(short width, short height)
+    {
+        if (width <= 0 || height <= 0)
+            throw new InvalidDataException($"Image dimensions out of range: {width}x{height}");
+
+        long pixels = width * (long)height;
+        if (pixels > 100_000_000)
+            throw new InvalidDataException($"Image dimensions are too large: {width}x{height}");
+    }
+
+    private static int ValidateImageBufferSize(int size, short width, short height)
+    {
+        ValidateImageDimensions(width, height);
+        ValidateNonNegative(size, "Image buffer size");
+
+        long maxReasonable = width * (long)height * 8 + height * 8L + 4096;
+        if (size > maxReasonable)
+            throw new InvalidDataException($"Image buffer size {size} is too large for {width}x{height}.");
+
+        return size;
+    }
+
+    private static void SeekRelativeOffset(BinaryReader reader, long start, int offset, string label)
+    {
+        if (offset < 0)
+            throw new InvalidDataException($"{label} offset is negative: {offset}");
+
+        long position = start + offset;
+        if (position < 0 || position >= reader.BaseStream.Length)
+            throw new InvalidDataException($"{label} offset out of range: {offset}");
+
+        reader.BaseStream.Position = position;
     }
 
     private BinaryReader OpenChunkReader(BinaryReader reader, int size, short flag)
@@ -688,12 +929,18 @@ internal sealed class FusionAssetDumper
 
         if (flag == 1)
         {
+            if (size < 8)
+                throw new InvalidDataException($"Compressed chunk is too small: {size} bytes.");
+
             long start = reader.BaseStream.Position;
-            _ = reader.ReadInt32();
-            int compressedSize = reader.ReadInt32();
+            int decompressedSize = ValidateNonNegative(reader.ReadInt32(), "Chunk decompressed size");
+            int compressedSize = ValidateRemainingSize(reader, reader.ReadInt32(), "Compressed chunk data");
+            if (compressedSize > size - 8)
+                throw new InvalidDataException($"Compressed chunk data exceeds chunk size: {compressedSize} > {size - 8}");
+
             byte[] compressed = reader.ReadBytesExact(compressedSize);
             reader.BaseStream.Position = start + size;
-            return Compression.DecompressBlock(compressed);
+            return Compression.DecompressBlock(compressed, decompressedSize);
         }
 
         throw new NotSupportedException($"Chunk flag {flag} is not supported by the lite dumper.");
@@ -701,14 +948,6 @@ internal sealed class FusionAssetDumper
 
     private string ReadUniversal(BinaryReader reader, int length = -1)
     {
-        if (_unicode == null && (reader.BaseStream.Length - reader.BaseStream.Position > 1 || length > 1))
-        {
-            long pos = reader.BaseStream.Position;
-            reader.BaseStream.Seek(1, SeekOrigin.Current);
-            _unicode = reader.ReadByte() == 0;
-            reader.BaseStream.Position = pos;
-        }
-
         return _unicode == true
             ? BinaryText.ReadUtf16(reader, length)
             : BinaryText.ReadAscii(reader, length);
@@ -716,14 +955,6 @@ internal sealed class FusionAssetDumper
 
     private string ReadUniversalStop(BinaryReader reader, int length)
     {
-        if (_unicode == null && (reader.BaseStream.Length - reader.BaseStream.Position > 2 || length > 2))
-        {
-            long pos = reader.BaseStream.Position;
-            reader.BaseStream.Seek(1, SeekOrigin.Current);
-            _unicode = reader.ReadByte() == 0 && reader.ReadByte() != 0;
-            reader.BaseStream.Position = pos;
-        }
-
         return _unicode == true
             ? BinaryText.ReadUtf16Stop(reader, length)
             : BinaryText.ReadAsciiStop(reader, length);
@@ -732,7 +963,7 @@ internal sealed class FusionAssetDumper
     private string UniquePath(string path)
     {
         path = Path.GetFullPath(path);
-        if (_usedPaths.Add(path) && !File.Exists(path))
+        if (!File.Exists(path) && _usedPaths.Add(path))
             return path;
 
         string dir = Path.GetDirectoryName(path)!;
@@ -741,7 +972,7 @@ internal sealed class FusionAssetDumper
         for (int i = 1; ; i++)
         {
             string candidate = Path.Combine(dir, $"{name}_{i}{ext}");
-            if (_usedPaths.Add(candidate) && !File.Exists(candidate))
+            if (!File.Exists(candidate) && _usedPaths.Add(candidate))
                 return candidate;
         }
     }
@@ -828,13 +1059,45 @@ internal static class ImageTranslator
     private static bool IsRle(LiteImage image) =>
         image.Flag(ImageFlags.Rle) || image.Flag(ImageFlags.Rlew) || image.Flag(ImageFlags.Rlet);
 
+    private static byte PeekImageByte(LiteImage image, int position)
+    {
+        EnsureImageBytes(image, position, 1);
+        return image.ImageData[position];
+    }
+
+    private static byte ReadImageByte(LiteImage image, ref int position)
+    {
+        EnsureImageBytes(image, position, 1);
+        return image.ImageData[position++];
+    }
+
+    private static ushort ReadImageUInt16(LiteImage image, ref int position)
+    {
+        EnsureImageBytes(image, position, 2);
+        ushort value = (ushort)(image.ImageData[position] | image.ImageData[position + 1] << 8);
+        position += 2;
+        return value;
+    }
+
+    private static void SkipImageBytes(LiteImage image, ref int position, int count)
+    {
+        EnsureImageBytes(image, position, count);
+        position += count;
+    }
+
+    private static void EnsureImageBytes(LiteImage image, int position, int count)
+    {
+        if (position < 0 || count < 0 || position > image.ImageData.Length - count)
+            throw new InvalidDataException($"Image data is truncated at offset {position}; needed {count} bytes, length is {image.ImageData.Length}.");
+    }
+
     private static byte[] Normal24BitMaskedToBgra(LiteImage image, TranslatorContext context)
     {
         byte[] output = new byte[checked(image.Width * image.Height * 4)];
         int stride = image.Width * 4;
         int pad = GetPadding(image, context);
         int position = 0;
-        int command = image.ImageData[position];
+        int command = PeekImageByte(image, position);
         bool rleLoop = false;
         bool rleCommander = false;
         bool rle = IsRle(image);
@@ -861,9 +1124,9 @@ internal static class ImageTranslator
             {
                 if (!rle || !rleLoop || rleCommander)
                 {
-                    r = image.ImageData[position++];
-                    g = image.ImageData[position++];
-                    b = image.ImageData[position++];
+                    r = ReadImageByte(image, ref position);
+                    g = ReadImageByte(image, ref position);
+                    b = ReadImageByte(image, ref position);
                     rleLoop = true;
                 }
 
@@ -892,7 +1155,7 @@ internal static class ImageTranslator
 
                 if (rle && --command == 0)
                 {
-                    command = image.ImageData[position++];
+                    command = ReadImageByte(image, ref position);
                     rleCommander = false;
                     rleLoop = false;
 
@@ -908,7 +1171,7 @@ internal static class ImageTranslator
                 }
             }
 
-            position += pad * 3;
+            SkipImageBytes(image, ref position, pad * 3);
         }
 
         if (image.Flag(ImageFlags.Alpha))
@@ -917,8 +1180,8 @@ internal static class ImageTranslator
             for (int y = 0; y < image.Height; y++)
             {
                 for (int x = 0; x < image.Width; x++)
-                    output[y * stride + x * 4 + 3] = image.ImageData[position++];
-                position += alphaPad;
+                    output[y * stride + x * 4 + 3] = ReadImageByte(image, ref position);
+                SkipImageBytes(image, ref position, alphaPad);
             }
         }
 
@@ -931,7 +1194,7 @@ internal static class ImageTranslator
         int stride = image.Width * 4;
         int pad = GetPadding(image, context);
         int position = 0;
-        int command = image.ImageData[position];
+        int command = PeekImageByte(image, position);
         bool rleLoop = false;
         bool rleCommander = false;
         bool rle = IsRle(image);
@@ -958,7 +1221,7 @@ internal static class ImageTranslator
             {
                 if (!rle || !rleLoop || rleCommander)
                 {
-                    ushort value = (ushort)(image.ImageData[position++] | image.ImageData[position++] << 8);
+                    ushort value = ReadImageUInt16(image, ref position);
                     r = (byte)((value & 63488) >> 11);
                     g = (byte)((value & 2016) >> 5);
                     b = (byte)(value & 31);
@@ -983,7 +1246,7 @@ internal static class ImageTranslator
 
                 if (rle && --command == 0)
                 {
-                    command = image.ImageData[position++];
+                    command = ReadImageByte(image, ref position);
                     rleCommander = false;
                     rleLoop = false;
                     if (command > 128)
@@ -998,7 +1261,7 @@ internal static class ImageTranslator
                 }
             }
 
-            position += pad * 2;
+            SkipImageBytes(image, ref position, pad * 2);
         }
 
         ApplyTrailingAlpha(image, output, ref position, stride);
@@ -1011,7 +1274,7 @@ internal static class ImageTranslator
         int stride = image.Width * 4;
         int pad = GetPadding(image, context);
         int position = 0;
-        int command = image.ImageData[position];
+        int command = PeekImageByte(image, position);
         bool rleLoop = false;
         bool rleCommander = false;
         bool rle = IsRle(image);
@@ -1038,7 +1301,7 @@ internal static class ImageTranslator
             {
                 if (!rle || !rleLoop || rleCommander)
                 {
-                    ushort value = (ushort)(image.ImageData[position++] | image.ImageData[position++] << 8);
+                    ushort value = ReadImageUInt16(image, ref position);
                     r = (byte)((value & 31744) >> 10);
                     g = (byte)((value & 992) >> 5);
                     b = (byte)(value & 31);
@@ -1063,7 +1326,7 @@ internal static class ImageTranslator
 
                 if (rle && --command == 0)
                 {
-                    command = image.ImageData[position++];
+                    command = ReadImageByte(image, ref position);
                     rleCommander = false;
                     rleLoop = false;
                     if (command > 128)
@@ -1078,7 +1341,7 @@ internal static class ImageTranslator
                 }
             }
 
-            position += pad;
+            SkipImageBytes(image, ref position, pad * 2);
         }
 
         ApplyTrailingAlpha(image, output, ref position, stride);
@@ -1096,6 +1359,7 @@ internal static class ImageTranslator
             for (int x = 0; x < image.Width; x++)
             {
                 int newPos = y * stride + x * 4;
+                EnsureImageBytes(image, position, 4);
                 if (Math.Abs(context.Fusion - 3.0f) < 0.01f && !context.Seeded)
                 {
                     output[newPos + 0] = image.ImageData[position + 2];
@@ -1122,9 +1386,9 @@ internal static class ImageTranslator
 
                     output[newPos + 3] = image.ImageData[position + 3];
                 }
-                else if (image.ImageData[newPos + 2] == image.TransparentColor.R &&
-                         image.ImageData[newPos + 1] == image.TransparentColor.G &&
-                         image.ImageData[newPos + 0] == image.TransparentColor.B)
+                else if (output[newPos + 2] == image.TransparentColor.R &&
+                         output[newPos + 1] == image.TransparentColor.G &&
+                         output[newPos + 0] == image.TransparentColor.B)
                 {
                     output[newPos + 3] = 0;
                 }
@@ -1132,7 +1396,7 @@ internal static class ImageTranslator
                 position += 4;
             }
 
-            position += pad * 4;
+            SkipImageBytes(image, ref position, pad * 4);
         }
 
         if (position != image.ImageData.Length && image.Flag(ImageFlags.Alpha) && !image.Flag(ImageFlags.Rgba))
@@ -1150,8 +1414,8 @@ internal static class ImageTranslator
         for (int y = 0; y < image.Height; y++)
         {
             for (int x = 0; x < image.Width; x++)
-                output[y * stride + x * 4 + 3] = image.ImageData[position++];
-            position += alphaPad;
+                output[y * stride + x * 4 + 3] = ReadImageByte(image, ref position);
+            SkipImageBytes(image, ref position, alphaPad);
         }
     }
 }
@@ -1251,7 +1515,7 @@ internal sealed class ProgressMeter
     public void Step(int value)
     {
         int percent = value * 100 / _total;
-        if (percent == _lastPercent || percent % 10 != 0 && percent != 100)
+        if (percent == _lastPercent || (percent % 10 != 0 && percent != 100))
             return;
 
         _lastPercent = percent;
@@ -1264,6 +1528,7 @@ internal sealed class ProgressMeter
 
 internal sealed class WindowedReadStream : Stream
 {
+    // This stream is a non-owning view over the package FileStream.
     private readonly Stream _baseStream;
     private readonly long _start;
     private readonly long _length;
@@ -1324,18 +1589,33 @@ internal sealed class WindowedReadStream : Stream
 
 internal static class Compression
 {
-    public static byte[] DecompressBlock(byte[] data)
+    private const int MaxDecompressedBlockBytes = 1024 * 1024 * 1024;
+
+    public static byte[] DecompressBlock(byte[] data, int maxOutputSize = MaxDecompressedBlockBytes)
     {
+        if (maxOutputSize < 0)
+            throw new InvalidDataException($"Invalid decompressed size: {maxOutputSize}");
+
         using MemoryStream input = new(data, writable: false);
         using Stream stream = IsZlib(data)
             ? new ZLibStream(input, CompressionMode.Decompress)
             : new DeflateStream(input, CompressionMode.Decompress);
-        using MemoryStream output = new();
-        stream.CopyTo(output);
+        int capacity = maxOutputSize is > 0 and < MaxDecompressedBlockBytes ? maxOutputSize : 0;
+        using MemoryStream output = capacity > 0 ? new MemoryStream(capacity) : new MemoryStream();
+        byte[] buffer = new byte[81920];
+        int read;
+        while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            if (output.Length + read > maxOutputSize)
+                throw new InvalidDataException($"Decompressed block exceeds limit of {maxOutputSize} bytes.");
+
+            output.Write(buffer, 0, read);
+        }
+
         return output.ToArray();
     }
 
-    private static bool IsZlib(byte[] data)
+    public static bool IsZlib(byte[] data)
     {
         if (data.Length < 2 || data[0] != 0x78)
             return false;
@@ -1357,6 +1637,14 @@ internal static class BinaryReaderExtensions
         return value;
     }
 
+    public static uint PeekUInt32(this BinaryReader reader)
+    {
+        long pos = reader.BaseStream.Position;
+        uint value = reader.ReadUInt32();
+        reader.BaseStream.Position = pos;
+        return value;
+    }
+
     public static long PeekInt64(this BinaryReader reader)
     {
         long pos = reader.BaseStream.Position;
@@ -1374,12 +1662,50 @@ internal static class BinaryReaderExtensions
         return value;
     }
 
+    public static bool MatchesBytesAt(this BinaryReader reader, long relativePosition, params byte[] expected)
+    {
+        long pos = reader.BaseStream.Position;
+        try
+        {
+            reader.BaseStream.Seek(relativePosition, SeekOrigin.Current);
+            if (!reader.HasBytes(expected.Length))
+                return false;
+
+            for (int i = 0; i < expected.Length; i++)
+            {
+                if (reader.ReadByte() != expected[i])
+                    return false;
+            }
+
+            return true;
+        }
+        finally
+        {
+            reader.BaseStream.Position = pos;
+        }
+    }
+
     public static byte[] ReadBytesExact(this BinaryReader reader, int count)
     {
+        if (count < 0)
+            throw new InvalidDataException($"Cannot read a negative byte count: {count}");
+        if (!reader.HasBytes(count))
+            throw new EndOfStreamException($"Needed {count} bytes, got {reader.BaseStream.Length - reader.BaseStream.Position} remaining.");
+
         byte[] data = reader.ReadBytes(count);
         if (data.Length != count)
             throw new EndOfStreamException($"Needed {count} bytes, got {data.Length}.");
         return data;
+    }
+
+    public static void SkipBytesExact(this BinaryReader reader, int count)
+    {
+        if (count < 0)
+            throw new InvalidDataException($"Cannot skip a negative byte count: {count}");
+        if (!reader.HasBytes(count))
+            throw new EndOfStreamException($"Needed to skip {count} bytes, got {reader.BaseStream.Length - reader.BaseStream.Position} remaining.");
+
+        reader.BaseStream.Seek(count, SeekOrigin.Current);
     }
 }
 
@@ -1398,6 +1724,27 @@ internal static class BinaryText
                 break;
             sb.Append((char)b);
         }
+
+        return sb.ToString();
+    }
+
+    public static string ReadAsciiZ(BinaryReader reader, int maxBytes)
+    {
+        if (maxBytes < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxBytes));
+
+        StringBuilder sb = new();
+        for (int i = 0; i < maxBytes && reader.HasBytes(1); i++)
+        {
+            byte b = reader.ReadByte();
+            if (b == 0)
+                return sb.ToString();
+
+            sb.Append((char)b);
+        }
+
+        if (reader.HasBytes(1))
+            throw new InvalidDataException($"ASCII string exceeds {maxBytes} bytes.");
 
         return sb.ToString();
     }
@@ -1472,8 +1819,17 @@ internal static class BinaryText
 
 internal static class BitFlag
 {
-    public static bool IsSet(byte value, int bit) => (value & (1 << bit)) != 0;
-    public static bool IsSet(uint value, int bit) => (value & (1u << bit)) != 0;
+    public static bool IsSet(byte value, int bit)
+    {
+        Debug.Assert(bit is >= 0 and < 8);
+        return bit is >= 0 and < 8 && (value & (1 << bit)) != 0;
+    }
+
+    public static bool IsSet(uint value, int bit)
+    {
+        Debug.Assert(bit is >= 0 and < 32);
+        return bit is >= 0 and < 32 && (value & (1u << bit)) != 0;
+    }
 }
 
 internal static class Sanitizer
@@ -1486,7 +1842,18 @@ internal static class Sanitizer
         if (string.IsNullOrWhiteSpace(name))
             return "unnamed";
 
-        string cleaned = new(name.Select(ch => InvalidFileNameChars.Contains(ch) || char.IsControl(ch) ? '_' : ch).ToArray());
+        char[]? chars = null;
+        for (int i = 0; i < name.Length; i++)
+        {
+            char ch = name[i];
+            if (!InvalidFileNameChars.Contains(ch) && !char.IsControl(ch))
+                continue;
+
+            chars ??= name.ToCharArray();
+            chars[i] = '_';
+        }
+
+        string cleaned = chars == null ? name : new string(chars);
         cleaned = cleaned.Trim().TrimEnd('.');
         return string.IsNullOrWhiteSpace(cleaned) ? "unnamed" : cleaned;
     }

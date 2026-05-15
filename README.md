@@ -45,13 +45,14 @@ The output folder will contain subfolders like:
 
 ## Memory Usage
 
-Measured on `Five Nights at Candy's 3.exe`, a 509 MB Windows Fusion 2.5 game:
+Measured on `Five Nights at Candy's 3.exe`, a 509,837,626 byte Windows Fusion
+2.5 game, using the Release build and a clean output directory:
 
 | Tool | Peak RAM | Dump Time | Result |
 | --- | ---: | ---: | --- |
 | CTFAK | ~8.7 GB | 46s | Dumped assets, but used excessive RAM |
 | NebulaFD | ~7.0 GB | 2m 13s | Dumped assets after local sequential-dump patches |
-| FusionAssetLite | 136 MB | 47s | Dumped the same 3270 images, 138 sounds, packed data, and shaders |
+| FusionAssetLite | 171.6 MiB | 44.67s | Dumped 3270 images, 138 sounds, 16 packed files, and 16 shaders |
 
 FusionAssetLite stays lower because it streams large asset banks from the game
 file and decodes one asset at a time instead of loading the whole game model.
