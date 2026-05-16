@@ -527,8 +527,6 @@ internal sealed class FusionAssetDumper
             }
 
             progress.Step(i + 1);
-            if ((i + 1) % 128 == 0)
-                GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
         }
 
         progress.Done();
