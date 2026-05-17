@@ -20,7 +20,7 @@ Other exporters and older Clickteam formats may need more readers.
 ## Requirements
 
 - Windows
-- .NET 8 SDK or newer (if building from source)
+- [.NET 8 SDK or newer](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (if building from source)
 
 Prebuilt self-contained releases do not require users to install .NET.
 
