@@ -52,7 +52,7 @@ Measured on `Five Nights at Candy's 3.exe`, a 509MB byte Windows Fusion
 | --- | ---: | ---: | --- |
 | CTFAK | ~8.7 GB | 46s | Dumped assets, but used excessive RAM |
 | NebulaFD | ~7.0 GB | 2m 13s | Dumped assets after local sequential-dump patches |
-| FusionAssetLite | 171.6 MB | 44.67s | Dumped 3270 images, 138 sounds, 16 packed files, and 16 shaders |
+| FusionAssetLite | 171 MB | 44s | Dumped 3270 images, 138 sounds, 16 packed files, and 16 shaders |
 
 FusionAssetLite stays lower because it streams large asset banks from the game
 file and decodes one asset at a time instead of loading the whole game model.
