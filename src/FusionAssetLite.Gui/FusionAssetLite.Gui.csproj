@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <AssemblyName>FusionAssetLite.Gui</AssemblyName>
+    <RootNamespace>FusionAssetLite.Gui</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FusionAssetLite\FusionAssetLite.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="CopyFusionAssetLiteCli" AfterTargets="Build">
+    <ItemGroup>
+      <FusionAssetLiteCliFiles Include="$(MSBuildThisFileDirectory)..\FusionAssetLite\bin\$(Configuration)\net8.0-windows\**\*.*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(FusionAssetLiteCliFiles)"
+      DestinationFiles="@(FusionAssetLiteCliFiles->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

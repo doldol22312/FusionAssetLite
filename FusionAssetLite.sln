@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FusionAssetLite", "src\FusionAssetLite\FusionAssetLite.csproj", "{D77337A9-7C99-445F-BDD9-2B28AFAD7FC7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FusionAssetLite.Gui", "src\FusionAssetLite.Gui\FusionAssetLite.Gui.csproj", "{16661382-2085-420E-80B1-58E1103F59F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,11 +31,24 @@ Global
 		{D77337A9-7C99-445F-BDD9-2B28AFAD7FC7}.Release|x64.Build.0 = Release|Any CPU
 		{D77337A9-7C99-445F-BDD9-2B28AFAD7FC7}.Release|x86.ActiveCfg = Release|Any CPU
 		{D77337A9-7C99-445F-BDD9-2B28AFAD7FC7}.Release|x86.Build.0 = Release|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Debug|x64.Build.0 = Debug|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Debug|x86.Build.0 = Debug|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Release|x64.ActiveCfg = Release|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Release|x64.Build.0 = Release|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Release|x86.ActiveCfg = Release|Any CPU
+		{16661382-2085-420E-80B1-58E1103F59F6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D77337A9-7C99-445F-BDD9-2B28AFAD7FC7} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{16661382-2085-420E-80B1-58E1103F59F6} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

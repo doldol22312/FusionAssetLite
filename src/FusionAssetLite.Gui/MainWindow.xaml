@@ -1,0 +1,253 @@
+<Window x:Class="FusionAssetLite.Gui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="FusionAssetLite"
+        Width="980"
+        Height="660"
+        MinWidth="840"
+        MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="#F4F5F2"
+        AllowDrop="True"
+        DragOver="Window_DragOver"
+        Drop="Window_Drop"
+        Closing="Window_Closing">
+    <Window.Resources>
+        <SolidColorBrush x:Key="InkBrush" Color="#1D211F" />
+        <SolidColorBrush x:Key="MutedBrush" Color="#68716C" />
+        <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
+        <SolidColorBrush x:Key="LineBrush" Color="#D9DED7" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#0E7C66" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#E1F2ED" />
+        <SolidColorBrush x:Key="WarnBrush" Color="#B45309" />
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+        </Style>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="#FAFBF9" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="BorderBrush" Value="#AAB3AD" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+        </Style>
+
+        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="#FFF7ED" />
+            <Setter Property="BorderBrush" Value="#FDBA74" />
+            <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="0,0,14,10" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340" />
+                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="18">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Input Package" Style="{StaticResource FieldLabel}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="InputPathTextBox" Grid.Column="0" MinHeight="38" IsReadOnly="True" TextChanged="InputPathTextBox_TextChanged" />
+                            <Button Grid.Column="2" Content="Browse" Click="BrowseInput_Click" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,16,0,0">
+                        <TextBlock Text="Output Folder" Style="{StaticResource FieldLabel}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="OutputPathTextBox" Grid.Column="0" MinHeight="38" TextChanged="OutputPathTextBox_TextChanged" />
+                            <Button Grid.Column="2" Content="Browse" Click="BrowseOutput_Click" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" Margin="0,20,0,0">
+                        <TextBlock Text="Assets" Style="{StaticResource FieldLabel}" />
+                        <WrapPanel>
+                            <CheckBox x:Name="ImagesCheckBox" Content="Images" IsChecked="True" />
+                            <CheckBox x:Name="SoundsCheckBox" Content="Sounds" IsChecked="True" />
+                            <CheckBox x:Name="PackedDataCheckBox" Content="Packed Data" IsChecked="True" />
+                            <CheckBox x:Name="ShadersCheckBox" Content="Shaders" IsChecked="True" />
+                        </WrapPanel>
+                    </StackPanel>
+
+                    <Border Grid.Row="3" Margin="0,16,0,18" Background="#FAFBF9" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="Output" Style="{StaticResource FieldLabel}" />
+                            <TextBlock x:Name="OutputDetailTextBlock" Text="No run yet" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid Grid.Row="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="ExtractButton" Grid.Column="0" Content="Extract" Style="{StaticResource PrimaryButton}" Click="Extract_Click" />
+                        <Button x:Name="CancelButton" Grid.Column="2" Content="Cancel" Style="{StaticResource DangerButton}" IsEnabled="False" Click="Cancel_Click" />
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="12" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="16">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="14" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0">
+                            <TextBlock x:Name="StageTextBlock" Text="Waiting" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock x:Name="RunDetailTextBlock" Text="Choose a package and output folder." Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Border Background="#FAFBF9" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="10,7" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="#9CA3AF" Margin="0,0,7,0" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="StatusTextBlock" Text="Idle" FontSize="12" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Border>
+                            <Button x:Name="OpenOutputButton" Content="Open Output" Margin="0,0,8,0" IsEnabled="False" Click="OpenOutput_Click" />
+                            <Button x:Name="CopyLogButton" Content="Copy Log" IsEnabled="False" Click="CopyLog_Click" />
+                        </StackPanel>
+
+                        <ProgressBar x:Name="ExtractionProgressBar" Grid.Row="2" Grid.ColumnSpan="3" Height="8" Minimum="0" Maximum="100" Value="0" Foreground="{StaticResource AccentBrush}" Background="#E6EBE7" />
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="16,14,16,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Background="{StaticResource AccentSoftBrush}" BorderBrush="#B7DDD3" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="Images" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="ImagesSummaryTextBlock" Text="-" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="1" Background="#F3F4F6" BorderBrush="#D9DEE5" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="Sounds" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="SoundsSummaryTextBlock" Text="-" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="2" Background="#FFF7ED" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="Packed" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="PackedSummaryTextBlock" Text="-" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="3" Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="6" Padding="10,8">
+                                <StackPanel>
+                                    <TextBlock Text="Shaders" Foreground="{StaticResource MutedBrush}" FontSize="11" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="ShadersSummaryTextBlock" Text="-" FontSize="14" FontWeight="SemiBold" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <TextBox x:Name="LogTextBox"
+                                 Grid.Row="1"
+                                 Margin="16,0,16,16"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="NoWrap"
+                                 FontFamily="Cascadia Mono, Consolas"
+                                 FontSize="12"
+                                 Background="#111713"
+                                 Foreground="#D8E7DE"
+                                 BorderBrush="#111713"
+                                 SelectionBrush="{StaticResource AccentBrush}" />
+                    </Grid>
+                </Border>
+            </Grid>
+    </Grid>
+</Window>

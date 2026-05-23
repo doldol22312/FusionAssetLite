@@ -32,6 +32,14 @@ dotnet build .\FusionAssetLite.sln -c Release
 
 ## Run
 
+Launch the desktop GUI from source:
+
+```powershell
+dotnet run --project .\src\FusionAssetLite.Gui\FusionAssetLite.Gui.csproj -c Release
+```
+
+Or run the CLI directly:
+
 ```powershell
 .\src\FusionAssetLite\bin\Release\net8.0-windows\FusionAssetLite.exe "C:\Path\To\Game.exe" "C:\Path\To\Output"
 ```
