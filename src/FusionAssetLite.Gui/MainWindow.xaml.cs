@@ -12,23 +12,21 @@ namespace FusionAssetLite.Gui;
 
 public partial class MainWindow : Window
 {
-    private static readonly Regex ProgressLineRegex = new(
-        @"^(?<stage>Images|Sounds): (?<percent>\d+)% \((?<done>\d+)/(?<total>\d+)\), RAM (?<ram>\d+) MB$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static readonly Regex SummaryLineRegex = new(
-        @"^(?<stage>Images|Sounds|Packed data|Shader files): (?<written>\d+) written, (?<failed>\d+) failed$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     private Process? _runningProcess;
     private bool _cancelRequested;
     private string? _lastOutputPath;
     private bool _outputWasAutoFilled;
     private bool _settingAutoOutput;
+    private readonly Brush _statusSuccessBrush;
+    private readonly Brush _statusWarningBrush;
+    private readonly Brush _statusErrorBrush;
 
     public MainWindow()
     {
         InitializeComponent();
+        _statusSuccessBrush = (Brush)FindResource("StatusSuccessBrush");
+        _statusWarningBrush = (Brush)FindResource("StatusWarningBrush");
+        _statusErrorBrush = (Brush)FindResource("StatusErrorBrush");
     }
 
     private void BrowseInput_Click(object sender, RoutedEventArgs e)
@@ -75,7 +73,7 @@ public partial class MainWindow : Window
         string inputPath = InputPathTextBox.Text.Trim();
         if (!File.Exists(inputPath))
         {
-            SetStatus("Input missing", "#DC2626");
+            SetStatus("Input missing", _statusErrorBrush);
             MessageBox.Show(this, "Select an existing .exe or .ccn file.", "FusionAssetLite", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -90,7 +88,7 @@ public partial class MainWindow : Window
         string? cliPath = FindCliExecutable();
         if (cliPath == null)
         {
-            SetStatus("CLI missing", "#DC2626");
+            SetStatus("CLI missing", _statusErrorBrush);
             MessageBox.Show(this, "Build FusionAssetLite before running the GUI.", "FusionAssetLite", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
@@ -121,7 +119,7 @@ public partial class MainWindow : Window
                 StageTextBlock.Text = "Cancelled";
                 RunDetailTextBlock.Text = "The extractor process was stopped.";
                 ExtractionProgressBar.IsIndeterminate = false;
-                SetStatus("Cancelled", "#B45309");
+                SetStatus("Cancelled", _statusWarningBrush);
             }
             else if (exitCode == 0)
             {
@@ -129,14 +127,14 @@ public partial class MainWindow : Window
                 RunDetailTextBlock.Text = "Extraction finished.";
                 ExtractionProgressBar.IsIndeterminate = false;
                 ExtractionProgressBar.Value = 100;
-                SetStatus("Complete", "#0E7C66");
+                SetStatus("Complete", _statusSuccessBrush);
             }
             else
             {
                 StageTextBlock.Text = "Failed";
                 RunDetailTextBlock.Text = $"Extractor exited with code {exitCode}.";
                 ExtractionProgressBar.IsIndeterminate = false;
-                SetStatus("Failed", "#DC2626");
+                SetStatus("Failed", _statusErrorBrush);
             }
         }
         catch (Exception ex)
@@ -145,7 +143,7 @@ public partial class MainWindow : Window
             StageTextBlock.Text = "Failed";
             RunDetailTextBlock.Text = ex.Message;
             ExtractionProgressBar.IsIndeterminate = false;
-            SetStatus("Failed", "#DC2626");
+            SetStatus("Failed", _statusErrorBrush);
         }
         finally
         {
@@ -193,7 +191,7 @@ public partial class MainWindow : Window
             return;
 
         Clipboard.SetText(LogTextBox.Text);
-        SetStatus("Log copied", "#0E7C66");
+        SetStatus("Log copied", _statusSuccessBrush);
     }
 
     private void InputPathTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
@@ -283,8 +281,8 @@ public partial class MainWindow : Window
         [
             Path.Combine(baseDirectory, "FusionAssetLite.exe"),
             Path.Combine(baseDirectory, "FusionAssetLite.dll"),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "FusionAssetLite", "bin", configuration, "net8.0-windows", "FusionAssetLite.exe")),
-            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "FusionAssetLite", "bin", configuration, "net8.0-windows", "FusionAssetLite.dll"))
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "FusionAssetLite", "bin", configuration, "net10.0", "FusionAssetLite.exe")),
+            Path.GetFullPath(Path.Combine(baseDirectory, "..", "..", "..", "..", "FusionAssetLite", "bin", configuration, "net10.0", "FusionAssetLite.dll"))
         ];
 
         return candidates.FirstOrDefault(File.Exists);
@@ -341,7 +339,7 @@ public partial class MainWindow : Window
         ExtractionProgressBar.IsIndeterminate = true;
         CopyLogButton.IsEnabled = false;
         OpenOutputButton.IsEnabled = false;
-        SetStatus("Running", "#0E7C66");
+        SetStatus("Running", _statusSuccessBrush);
     }
 
     private void SetRunning(bool running)
@@ -377,7 +375,7 @@ public partial class MainWindow : Window
 
     private void ReadProcessLine(string line)
     {
-        Match progressMatch = ProgressLineRegex.Match(line);
+        Match progressMatch = ProgressLineRegex().Match(line);
         if (progressMatch.Success)
         {
             string stage = progressMatch.Groups["stage"].Value;
@@ -393,7 +391,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        Match summaryMatch = SummaryLineRegex.Match(line);
+        Match summaryMatch = SummaryLineRegex().Match(line);
         if (summaryMatch.Success)
         {
             string stage = summaryMatch.Groups["stage"].Value;
@@ -442,9 +440,19 @@ public partial class MainWindow : Window
             StageTextBlock.Text = "Finalizing";
     }
 
-    private void SetStatus(string text, string color)
+    private void SetStatus(string text, Brush brush)
     {
         StatusTextBlock.Text = text;
-        StatusDot.Fill = (SolidColorBrush)new BrushConverter().ConvertFromString(color)!;
+        StatusDot.Fill = brush;
     }
+
+    [GeneratedRegex(
+        @"^(?<stage>Images|Sounds): (?<percent>\d+)% \((?<done>\d+)/(?<total>\d+)\), RAM (?<ram>\d+) MB$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex ProgressLineRegex();
+
+    [GeneratedRegex(
+        @"^(?<stage>Images|Sounds|Packed data|Shader files): (?<written>\d+) written, (?<failed>\d+) failed$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex SummaryLineRegex();
 }

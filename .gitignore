@@ -7,6 +7,7 @@ obj/
 *.nupkg
 dist/
 tools/
+TestResults/
 
 # Local extraction output
 Dumps/
@@ -15,3 +16,6 @@ extracted_assets*/
 *.ccn
 *.dat
 *.mfa
+
+# Profiling traces (large binaries)
+traces/
