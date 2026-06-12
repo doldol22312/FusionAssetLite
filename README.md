@@ -96,8 +96,7 @@ Defender real-time scanning, or just use `--zip` — per-file scan overhead is
 the single largest external cost.
 
 The optimization history (13.3 s → 1.8 s on the same game) is charted in
-`docs/fnac3-optimization-timeline.svg`, with the working plan in
-`docs/performance-plan.md`.
+`docs/fnac3-optimization-timeline.svg`.
 
 ## Building from source
 
