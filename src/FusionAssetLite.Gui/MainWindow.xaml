@@ -3,74 +3,124 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="FusionAssetLite"
-        Width="1000"
-        Height="700"
-        MinWidth="860"
-        MinHeight="600"
+        Icon="pack://application:,,,/Assets/app.ico"
+        Width="1120"
+        Height="740"
+        MinWidth="960"
+        MinHeight="640"
         WindowStartupLocation="CenterScreen"
-        Background="#EFF2EC"
+        Background="{DynamicResource CanvasBrush}"
+        Foreground="{DynamicResource InkBrush}"
         FontFamily="Segoe UI Variable Text, Segoe UI"
         TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         AllowDrop="True"
         DragOver="Window_DragOver"
+        DragLeave="Window_DragLeave"
         Drop="Window_Drop"
-        Closing="Window_Closing">
+        Closing="Window_Closing"
+        StateChanged="Window_StateChanged"
+        PreviewKeyDown="Window_PreviewKeyDown">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="46"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="0" />
+    </shell:WindowChrome.WindowChrome>
+
     <Window.Resources>
-        <SolidColorBrush x:Key="InkBrush" Color="#1D211F" />
-        <SolidColorBrush x:Key="MutedBrush" Color="#68716C" />
-        <SolidColorBrush x:Key="PanelBrush" Color="#FFFFFF" />
-        <SolidColorBrush x:Key="LineBrush" Color="#DCE1DA" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#0E7C66" />
-        <SolidColorBrush x:Key="AccentDarkBrush" Color="#0A5F4E" />
-        <SolidColorBrush x:Key="AccentSoftBrush" Color="#E1F2ED" />
-        <SolidColorBrush x:Key="FieldBrush" Color="#F8FAF7" />
-        <SolidColorBrush x:Key="WarnBrush" Color="#B45309" />
-        <SolidColorBrush x:Key="StatusIdleBrush" Color="#9CA3AF" />
-        <SolidColorBrush x:Key="StatusSuccessBrush" Color="#0E7C66" />
-        <SolidColorBrush x:Key="StatusWarningBrush" Color="#B45309" />
-        <SolidColorBrush x:Key="StatusErrorBrush" Color="#DC2626" />
-
-        <DropShadowEffect x:Key="CardShadow" Color="#1D211F" Opacity="0.08" BlurRadius="20" ShadowDepth="3" Direction="270" />
-
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
             <Setter Property="TextWrapping" Value="NoWrap" />
         </Style>
 
-        <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="1,0,0,6" />
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontWeight" Value="Bold" />
         </Style>
 
         <Style x:Key="StatLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="FontSize" Value="10.5" />
+            <Setter Property="FontWeight" Value="Bold" />
         </Style>
 
         <Style x:Key="StatValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="FontSize" Value="21" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="0,3,0,0" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
 
+        <!-- Slim ScrollBar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Stylus.IsFlicksEnabled" Value="False" />
+            <Setter Property="Foreground" Value="{DynamicResource ScrollThumbBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="9" />
+            <Setter Property="MinWidth" Value="9" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Grid x:Name="Bg" SnapsToDevicePixels="True" Background="Transparent">
+                            <Track x:Name="PART_Track" IsDirectionReversed="True" IsEnabled="{TemplateBinding IsEnabled}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Opacity="0" Focusable="False" />
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" Focusable="False" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border x:Name="ThumbBorder"
+                                                        Margin="2,3"
+                                                        CornerRadius="3"
+                                                        Background="{DynamicResource ScrollThumbBrush}" />
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter Property="Width" Value="Auto" />
+                                <Setter Property="MinWidth" Value="0" />
+                                <Setter Property="Height" Value="9" />
+                                <Setter Property="MinHeight" Value="9" />
+                                <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Placeholder TextBox -->
         <Style TargetType="TextBox">
-            <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Background" Value="{StaticResource FieldBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-            <Setter Property="Padding" Value="10,8" />
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Background" Value="{DynamicResource WellBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="FontSize" Value="12.5" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
-            <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}" />
-            <Setter Property="CaretBrush" Value="{StaticResource InkBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource InkBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -79,17 +129,34 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="7">
-                            <ScrollViewer x:Name="PART_ContentHost"
-                                          Margin="{TemplateBinding Padding}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          Focusable="False" />
+                            <Grid>
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Focusable="False" />
+                                <TextBlock x:Name="Placeholder"
+                                           Text="{TemplateBinding Tag}"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           Margin="{TemplateBinding Padding}"
+                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                           IsHitTestVisible="False"
+                                           TextTrimming="CharacterEllipsis"
+                                           Visibility="Collapsed" />
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="Text" Value="{x:Null}">
+                                <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#B8C2BA" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.55" />
@@ -100,15 +167,16 @@
             </Setter>
         </Style>
 
+        <!-- Base Button -->
         <Style TargetType="Button">
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="Padding" Value="16,7" />
-            <Setter Property="BorderBrush" Value="#C4CCC5" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="13,0" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Background" Value="#FFFFFF" />
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ChipBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontSize" Value="12.5" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -120,7 +188,7 @@
                                     BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="7" />
                             <Border x:Name="Overlay"
-                                    Background="#1D211F"
+                                    Background="{DynamicResource ButtonHoverTintBrush}"
                                     Opacity="0"
                                     CornerRadius="7" />
                             <ContentPresenter HorizontalAlignment="Center"
@@ -130,14 +198,16 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Overlay" Property="Opacity" Value="0.06" />
+                                <Setter TargetName="Overlay" Property="Opacity" Value="1" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Overlay" Property="Opacity" Value="0.14" />
+                                <Setter TargetName="Overlay" Property="Background" Value="{DynamicResource ButtonPressedTintBrush}" />
+                                <Setter TargetName="Overlay" Property="Opacity" Value="1" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45" />
-                                <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+                                <Setter Property="Cursor" Value="Arrow" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -145,56 +215,127 @@
             </Setter>
         </Style>
 
+        <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Background" Value="{DynamicResource WellBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+        </Style>
+
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="{StaticResource AccentBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource AccentDarkBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentDarkBrush}" />
             <Setter Property="Foreground" Value="#FFFFFF" />
         </Style>
 
         <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#FFF7ED" />
-            <Setter Property="BorderBrush" Value="#FDBA74" />
-            <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+            <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource DangerBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
         </Style>
 
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Margin" Value="0,0,16,10" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Style x:Key="CaptionButton" TargetType="Button">
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Height" Value="45" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource SubInkBrush}" />
+            <Setter Property="Focusable" Value="False" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="CheckBox">
-                        <StackPanel Orientation="Horizontal" Background="Transparent">
-                            <Border x:Name="Box"
-                                    Width="17" Height="17"
-                                    CornerRadius="5"
-                                    BorderThickness="1.2"
-                                    BorderBrush="#AEB8B0"
-                                    Background="#FFFFFF"
-                                    VerticalAlignment="Center">
-                                <Path x:Name="Check"
-                                      Data="M 3,8 L 7,12 L 14,4"
-                                      Stroke="#FFFFFF"
-                                      StrokeThickness="2"
-                                      StrokeStartLineCap="Round"
-                                      StrokeEndLineCap="Round"
-                                      StrokeLineJoin="Round"
-                                      Stretch="Uniform"
-                                      Margin="2.5"
-                                      Visibility="Collapsed" />
-                            </Border>
-                            <ContentPresenter Margin="7,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
-                        </StackPanel>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBrush}" />
-                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-                                <Setter TargetName="Check" Property="Visibility" Value="Visible" />
-                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChipHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BorderStrongBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseCaptionButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CloseHoverBrush}" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#A52316" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,1" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Segmented Radio Pill -->
+        <Style x:Key="SegmentRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource SubInkBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="10,5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CardBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.5" />
@@ -205,250 +346,1338 @@
             </Setter>
         </Style>
 
-        <Style TargetType="ProgressBar">
-            <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-            <Setter Property="Background" Value="#E4EAE4" />
-            <Setter Property="BorderThickness" Value="0" />
+        <!-- Filter Pill -->
+        <Style x:Key="FilterPillRadio" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ProgressBar">
-                        <Grid>
-                            <Border x:Name="PART_Track"
-                                    Background="{TemplateBinding Background}"
-                                    CornerRadius="4" />
-                            <Border x:Name="PART_Indicator"
-                                    Background="{TemplateBinding Foreground}"
-                                    CornerRadius="4"
-                                    HorizontalAlignment="Left" />
-                        </Grid>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                Padding="9,4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChipBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <Style x:Key="Card" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource PanelBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Effect" Value="{StaticResource CardShadow}" />
+        <!-- Asset Bank Toggle Tile -->
+        <Style x:Key="BankTileCheckBox" TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Card"
+                                Background="{DynamicResource WellBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="11,9">
+                            <Grid>
+                                <ContentPresenter VerticalAlignment="Center" />
+                                <Border x:Name="TickBox"
+                                        Width="16" Height="16"
+                                        CornerRadius="4"
+                                        BorderThickness="1.2"
+                                        BorderBrush="{DynamicResource BorderStrongBrush}"
+                                        Background="{DynamicResource CardBrush}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top">
+                                    <Path x:Name="Tick"
+                                          Data="M 3,8 L 7,12 L 14,4"
+                                          Stroke="#FFFFFF"
+                                          StrokeThickness="2"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Stretch="Uniform"
+                                          Margin="2.5"
+                                          Visibility="Collapsed" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+                                <Setter TargetName="TickBox" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="TickBox" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.52" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style x:Key="StatCard" TargetType="Border">
+        <!-- Custom ComboBox + Item -->
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                Margin="3,1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ChipHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+            <Setter Property="Background" Value="{DynamicResource WellBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd"
+                                                Background="{DynamicResource WellBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="7">
+                                            <Grid Margin="11,0,10,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <Path Grid.Column="1"
+                                                      Data="M 0,0 L 4,4 L 8,0"
+                                                      Stroke="{DynamicResource SubInkBrush}"
+                                                      StrokeThickness="1.6"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      StrokeLineJoin="Round"
+                                                      Width="9" Height="5"
+                                                      Stretch="Uniform"
+                                                      VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter x:Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="11,0,28,0"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left" />
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   PlacementTarget="{Binding ElementName=ToggleButton}"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border Margin="0,4,0,0"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Background="{DynamicResource CardBrush}"
+                                        BorderBrush="{DynamicResource BorderStrongBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="2,3">
+                                    <ScrollViewer SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.52" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ProgressBar with Animated Indeterminate Shimmer -->
+        <Style TargetType="ProgressBar">
+            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource WellBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border x:Name="PART_Track"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                ClipToBounds="True">
+                            <Grid>
+                                <Border x:Name="PART_Indicator"
+                                        Background="{TemplateBinding Foreground}"
+                                        CornerRadius="3"
+                                        HorizontalAlignment="Left" />
+                                <Border x:Name="IndeterminateCapsule"
+                                        Width="150"
+                                        HorizontalAlignment="Left"
+                                        CornerRadius="3"
+                                        Visibility="Collapsed">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#0018A97E" Offset="0" />
+                                            <GradientStop Color="#FF1EC191" Offset="0.5" />
+                                            <GradientStop Color="#0018A97E" Offset="1" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="ShimmerTranslate" X="-160" />
+                                    </Border.RenderTransform>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsIndeterminate" Value="True">
+                                <Setter TargetName="PART_Indicator" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="IndeterminateCapsule" Property="Visibility" Value="Visible" />
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard x:Name="ShimmerStoryboard">
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetName="ShimmerTranslate"
+                                                             Storyboard.TargetProperty="X"
+                                                             From="-160"
+                                                             To="760"
+                                                             Duration="0:0:1.25" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <StopStoryboard BeginStoryboardName="ShimmerStoryboard" />
+                                </Trigger.ExitActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Card Surfaces -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="10" />
         </Style>
     </Window.Resources>
 
-    <Grid Margin="20,16,20,20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="14" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <Border x:Name="WindowRootBorder"
+            Background="{DynamicResource CanvasBrush}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="46" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Grid Grid.Row="0">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Width="34" Height="34" CornerRadius="9" VerticalAlignment="Center">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#13937A" Offset="0" />
-                            <GradientStop Color="#0A5F4E" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <TextBlock Text="F" Foreground="#FFFFFF" FontSize="17" FontWeight="Bold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Border>
-                <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="FusionAssetLite" FontSize="16" FontWeight="SemiBold" />
-                    <TextBlock Text="Extract images, sounds, packed data and shaders from game packages"
-                               Foreground="{StaticResource MutedBrush}" FontSize="11" Margin="0,1,0,0" />
-                </StackPanel>
-            </StackPanel>
-            <TextBlock Text="Drop a package anywhere in this window"
-                       Foreground="{StaticResource MutedBrush}" FontSize="11"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" />
-        </Grid>
+            <!-- Custom Integrated Titlebar -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource ChromeBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,0,1">
+                <Grid Margin="16,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="350" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Custom Isometric Prism Emblem -->
+                        <Border Width="26" Height="26"
+                                CornerRadius="6"
+                                Background="{DynamicResource AccentSoftBrush}"
+                                BorderBrush="{DynamicResource AccentBorderBrush}"
+                                BorderThickness="1"
+                                VerticalAlignment="Center">
+                            <Canvas Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Polygon Points="8,2 14,5.2 8,8.4 2,5.2" Fill="{DynamicResource AccentHoverBrush}" />
+                                <Polygon Points="2,5.6 7.6,8.7 7.6,14.2 2,11.1" Fill="{DynamicResource AccentBrush}" />
+                                <Polygon Points="14,5.6 8.4,8.7 8.4,14.2 14,11.1" Fill="{DynamicResource AccentDarkBrush}" />
+                            </Canvas>
+                        </Border>
 
-            <!-- Left panel: setup -->
-            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="18">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                        <TextBlock Text="FusionAssetLite"
+                                   FontSize="13.5"
+                                   FontWeight="SemiBold"
+                                   Margin="10,0,0,0"
+                                   VerticalAlignment="Center" />
 
-                    <StackPanel Grid.Row="0">
-                        <TextBlock Text="INPUT PACKAGE" Style="{StaticResource FieldLabel}" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="InputPathTextBox" Grid.Column="0" MinHeight="38" IsReadOnly="True" TextChanged="InputPathTextBox_TextChanged" />
-                            <Button Grid.Column="2" Content="Browse" Click="BrowseInput_Click" />
-                        </Grid>
+                        <Border Height="14" Width="1" Background="{DynamicResource BorderStrongBrush}" Margin="10,0" VerticalAlignment="Center" />
+
+                        <TextBlock Text="Clickteam Fusion 2.5 Package Extractor"
+                                   Foreground="{DynamicResource MutedBrush}"
+                                   FontSize="11.5"
+                                   VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" Margin="0,16,0,0">
-                        <TextBlock Text="OUTPUT FOLDER" Style="{StaticResource FieldLabel}" />
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="OutputPathTextBox" Grid.Column="0" MinHeight="38" TextChanged="OutputPathTextBox_TextChanged" />
-                            <Button Grid.Column="2" Content="Browse" Click="BrowseOutput_Click" />
-                        </Grid>
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Stretch"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Button x:Name="ThemeToggleButton"
+                                Style="{StaticResource CaptionButton}"
+                                Width="40"
+                                ToolTip="Switch Dark / Light theme"
+                                Click="ThemeToggle_Click">
+                            <Path x:Name="ThemeIconPath"
+                                  Data="M 12,3 A 9,9 0 1 0 21,12 A 7,7 0 0 1 12,3 Z"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.6"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Width="14" Height="14"
+                                  Stretch="Uniform" />
+                        </Button>
+
+                        <Border Width="1" Height="16" Background="{DynamicResource BorderBrush}" VerticalAlignment="Center" Margin="2,0,4,0" />
+
+                        <Button Style="{StaticResource CaptionButton}" ToolTip="Minimize" Click="Minimize_Click">
+                            <Line X1="0" Y1="0" X2="10" Y2="0"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.2" />
+                        </Button>
+
+                        <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}" ToolTip="Maximize" Click="Maximize_Click">
+                            <Path x:Name="MaximizeIconPath"
+                                  Data="M 0,0 H 10 V 10 H 0 Z"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.2"
+                                  Width="10" Height="10"
+                                  Stretch="Uniform" />
+                        </Button>
+
+                        <Button Style="{StaticResource CloseCaptionButton}" ToolTip="Close" Click="Close_Click">
+                            <Path Data="M 0,0 L 10,10 M 10,0 L 0,10"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.25"
+                                  Width="10" Height="10"
+                                  Stretch="Uniform" />
+                        </Button>
                     </StackPanel>
-
-                    <StackPanel Grid.Row="2" Margin="0,20,0,0">
-                        <TextBlock Text="ASSETS" Style="{StaticResource FieldLabel}" />
-                        <WrapPanel>
-                            <CheckBox x:Name="ImagesCheckBox" Content="Images" IsChecked="True" />
-                            <CheckBox x:Name="SoundsCheckBox" Content="Sounds" IsChecked="True" />
-                            <CheckBox x:Name="PackedDataCheckBox" Content="Packed Data" IsChecked="True" />
-                            <CheckBox x:Name="ShadersCheckBox" Content="Shaders" IsChecked="True" />
-                        </WrapPanel>
-                    </StackPanel>
-
-                    <Border Grid.Row="3" Margin="0,14,0,18" Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
-                        <StackPanel>
-                            <TextBlock Text="OUTPUT" Style="{StaticResource FieldLabel}" />
-                            <TextBlock x:Name="OutputDetailTextBlock" Text="No run yet" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" FontSize="12" />
-                        </StackPanel>
-                    </Border>
-
-                    <Grid Grid.Row="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="8" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Button x:Name="ExtractButton" Grid.Column="0" Content="Extract" MinHeight="40" FontSize="14" Style="{StaticResource PrimaryButton}" Click="Extract_Click" />
-                        <Button x:Name="CancelButton" Grid.Column="2" Content="Cancel" MinHeight="40" Style="{StaticResource DangerButton}" IsEnabled="False" Click="Cancel_Click" />
-                    </Grid>
                 </Grid>
             </Border>
 
-            <!-- Right column: status + log -->
-            <Grid Grid.Column="2">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="14" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+            <!-- Main Workspace -->
+            <Grid Grid.Row="1" Margin="18,16,18,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="376" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                <Border Grid.Row="0" Style="{StaticResource Card}" Padding="18,16">
+                <!-- LEFT SIDEBAR: Configuration & Action -->
+                <Border Grid.Column="0" Style="{StaticResource Card}" Padding="16">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="14" />
                             <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="14" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Row="0" Grid.Column="0">
-                            <TextBlock x:Name="StageTextBlock" Text="Waiting" FontSize="19" FontWeight="SemiBold" />
-                            <TextBlock x:Name="RunDetailTextBlock" Text="Choose a package and output folder." Foreground="{StaticResource MutedBrush}" FontSize="12" Margin="0,3,0,0" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
-                            <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14" Padding="11,7" Margin="0,0,8,0" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse x:Name="StatusDot" Width="8" Height="8" Fill="{StaticResource StatusIdleBrush}" Margin="0,0,7,0" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="StatusTextBlock" Text="Idle" FontSize="12" FontWeight="SemiBold" />
-                                </StackPanel>
-                            </Border>
-                            <Button x:Name="OpenOutputButton" Content="Open Output" Margin="0,0,8,0" IsEnabled="False" Click="OpenOutput_Click" />
-                            <Button x:Name="CopyLogButton" Content="Copy Log" IsEnabled="False" Click="CopyLog_Click" />
-                        </StackPanel>
-
-                        <ProgressBar x:Name="ExtractionProgressBar" Grid.Row="2" Grid.ColumnSpan="3" Height="8" Minimum="0" Maximum="100" Value="0" />
-                    </Grid>
-                </Border>
-
-                <Border Grid.Row="2" Style="{StaticResource Card}" Padding="0">
-                    <Grid>
-                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="16,14,16,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                        <!-- 1. Source Package -->
+                        <StackPanel Grid.Row="0">
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="SOURCE PACKAGE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                                <Border x:Name="PackageTypeBadge"
+                                        HorizontalAlignment="Right"
+                                        Background="{DynamicResource AccentSoftBrush}"
+                                        BorderBrush="{DynamicResource AccentBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6,1.5"
+                                        Visibility="Collapsed">
+                                    <TextBlock x:Name="PackageTypeTextBlock"
+                                               Text="EXE"
+                                               Foreground="{DynamicResource AccentHoverBrush}"
+                                               FontSize="10"
+                                               FontWeight="Bold" />
+                                </Border>
+                            </Grid>
 
-                            <Border Grid.Column="0" Style="{StaticResource StatCard}" Background="{StaticResource AccentSoftBrush}" BorderBrush="#BCDFD5" Margin="0,0,8,0">
-                                <StackPanel>
-                                    <TextBlock Text="IMAGES" Style="{StaticResource StatLabel}" />
-                                    <TextBlock x:Name="ImagesSummaryTextBlock" Text="–" Style="{StaticResource StatValue}" />
-                                </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0">
+                                    <TextBox x:Name="InputPathTextBox"
+                                             Tag="Select or drop .exe / .ccn..."
+                                             Padding="10,0,28,0"
+                                             Text=""
+                                             ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                             TextChanged="InputPathTextBox_TextChanged" />
+                                    <Button x:Name="ClearInputButton"
+                                            Width="22" Height="22"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Margin="0,0,6,0"
+                                            Padding="0"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            ToolTip="Clear input package"
+                                            Visibility="Collapsed"
+                                            Click="ClearInput_Click">
+                                        <Path Data="M 1,1 L 7,7 M 7,1 L 1,7"
+                                              Stroke="{DynamicResource MutedBrush}"
+                                              StrokeThickness="1.5"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              Width="8" Height="8" />
+                                    </Button>
+                                </Grid>
+                                <Button Grid.Column="2" Content="Browse..." Click="BrowseInput_Click" />
+                            </Grid>
+
+                            <!-- Compact Package Info / Interactive Drop Bar -->
+                            <Border x:Name="PackageInfoBar"
+                                    Margin="0,8,0,0"
+                                    Background="{DynamicResource WellBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="10,8"
+                                    Cursor="Hand"
+                                    MouseLeftButtonUp="PackageInfoBar_Click">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="10" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="28" Height="28"
+                                            CornerRadius="6"
+                                            Background="{DynamicResource ChipBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1">
+                                        <Path x:Name="PackageInfoIcon"
+                                              Data="M 12,3 V 15 M 7,8 L 12,3 L 17,8 M 4,17 V 19 A 2,2 0 0 0 6,21 H 18 A 2,2 0 0 0 20,19 V 17"
+                                              Stroke="{DynamicResource AccentBrush}"
+                                              StrokeThickness="1.7"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Width="14" Height="14"
+                                              Stretch="Uniform" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="PackageInfoTitleTextBlock"
+                                                   Text="Drop .exe or .ccn anywhere"
+                                                   FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock x:Name="PackageInfoSubTextBlock"
+                                                   Text="Or click here to browse for a game file"
+                                                   Foreground="{DynamicResource MutedBrush}"
+                                                   FontSize="11"
+                                                   Margin="0,1,0,0"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
                             </Border>
+                        </StackPanel>
 
-                            <Border Grid.Column="1" Style="{StaticResource StatCard}" Background="#F1F3F5" BorderBrush="#DBE0E6" Margin="0,0,8,0">
-                                <StackPanel>
-                                    <TextBlock Text="SOUNDS" Style="{StaticResource StatLabel}" />
-                                    <TextBlock x:Name="SoundsSummaryTextBlock" Text="–" Style="{StaticResource StatValue}" />
-                                </StackPanel>
-                            </Border>
+                        <!-- 2. Output Destination + Folder / Zip Segmented Control -->
+                        <StackPanel Grid.Row="1" Margin="0,15,0,0">
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="OUTPUT DESTINATION" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                                <Border HorizontalAlignment="Right"
+                                        Background="{DynamicResource WellBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton x:Name="FolderOutputRadio"
+                                                     Style="{StaticResource SegmentRadio}"
+                                                     IsChecked="True"
+                                                     Padding="8,3"
+                                                     FontSize="11"
+                                                     ToolTip="Write extracted assets as files in folders"
+                                                     Checked="OutputMode_Changed">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="M 2,5 A 1.5,1.5 0 0 1 3.5,3.5 H 7.5 L 9.2,5.5 H 16.5 A 1.5,1.5 0 0 1 18,7 V 14.5 A 1.5,1.5 0 0 1 16.5,16 H 3.5 A 1.5,1.5 0 0 1 2,14.5 Z"
+                                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                                      StrokeThickness="1.4"
+                                                      Width="11" Height="10"
+                                                      Stretch="Uniform"
+                                                      Margin="0,0,5,0"
+                                                      VerticalAlignment="Center" />
+                                                <TextBlock Text="Folder" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                        <RadioButton x:Name="ZipOutputRadio"
+                                                     Style="{StaticResource SegmentRadio}"
+                                                     Padding="8,3"
+                                                     FontSize="11"
+                                                     ToolTip="Write a single stored .zip archive (--zip). Fastest on Windows and avoids AV per-file scanning."
+                                                     Checked="OutputMode_Changed">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="M 4,2 H 14 A 1.5,1.5 0 0 1 15.5,3.5 V 16.5 A 1.5,1.5 0 0 1 14,18 H 4 A 1.5,1.5 0 0 1 2.5,16.5 V 3.5 A 1.5,1.5 0 0 1 4,2 Z M 8,5 H 10 M 8,8 H 10 M 8,11 H 10"
+                                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                                      StrokeThickness="1.4"
+                                                      Width="10" Height="11"
+                                                      Stretch="Uniform"
+                                                      Margin="0,0,5,0"
+                                                      VerticalAlignment="Center" />
+                                                <TextBlock Text="Stored .zip" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                            </StackPanel>
+                                        </RadioButton>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
 
-                            <Border Grid.Column="2" Style="{StaticResource StatCard}" Background="#FFF6EB" BorderBrush="#F6DDBC" Margin="0,0,8,0">
-                                <StackPanel>
-                                    <TextBlock Text="PACKED" Style="{StaticResource StatLabel}" />
-                                    <TextBlock x:Name="PackedSummaryTextBlock" Text="–" Style="{StaticResource StatValue}" />
-                                </StackPanel>
-                            </Border>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="OutputPathTextBox"
+                                         Grid.Column="0"
+                                         Tag="Auto: next to package..."
+                                         Text=""
+                                         ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                         TextChanged="OutputPathTextBox_TextChanged" />
+                                <Button Grid.Column="2" Content="Browse..." Click="BrowseOutput_Click" />
+                            </Grid>
 
-                            <Border Grid.Column="3" Style="{StaticResource StatCard}" Background="#EEF1FD" BorderBrush="#D4DBF6">
-                                <StackPanel>
-                                    <TextBlock Text="SHADERS" Style="{StaticResource StatLabel}" />
-                                    <TextBlock x:Name="ShadersSummaryTextBlock" Text="–" Style="{StaticResource StatValue}" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
+                            <TextBlock x:Name="OutputTargetPreviewTextBlock"
+                                       Text="Outputs to extracted_assets_lite\&lt;App Name&gt;\"
+                                       Foreground="{DynamicResource MutedBrush}"
+                                       FontSize="11"
+                                       Margin="2,5,2,0"
+                                       ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
 
-                        <Border Grid.Row="1" Margin="16,0,16,16" Background="#131915" CornerRadius="8" Padding="2">
-                            <TextBox x:Name="LogTextBox"
-                                     IsReadOnly="True"
-                                     AcceptsReturn="True"
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto"
-                                     TextWrapping="NoWrap"
-                                     Padding="10,8"
-                                     FontFamily="Cascadia Mono, Consolas"
-                                     FontSize="12"
-                                     Background="Transparent"
-                                     Foreground="#D8E7DE"
-                                     BorderThickness="0"
-                                     SelectionBrush="{StaticResource AccentBrush}"
-                                     CaretBrush="#D8E7DE" />
-                        </Border>
+                        <!-- 3. Asset Banks (2x2 Grid) -->
+                        <StackPanel Grid.Row="2" Margin="0,15,0,0">
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="ASSET BANKS" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                                <Button x:Name="ToggleAllBanksButton"
+                                        Style="{StaticResource LinkButton}"
+                                        Content="Select all"
+                                        HorizontalAlignment="Right"
+                                        Visibility="Collapsed"
+                                        Click="ToggleAllBanks_Click" />
+                            </Grid>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <CheckBox x:Name="ImagesCheckBox"
+                                          Grid.Row="0" Grid.Column="0"
+                                          Style="{StaticResource BankTileCheckBox}"
+                                          IsChecked="True"
+                                          Checked="AssetBankCheck_Changed"
+                                          Unchecked="AssetBankCheck_Changed">
+                                    <StackPanel Margin="0,0,18,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 3,5 H 19 V 19 H 3 Z M 7,15 L 10.5,11 L 13.5,14 L 16,11.5 L 19,15"
+                                                  Stroke="{DynamicResource ImagesAccentBrush}"
+                                                  StrokeThickness="1.7"
+                                                  StrokeLineJoin="Round"
+                                                  Width="13" Height="13"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="Images" FontSize="12.5" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text="PNG · RGBA / LZ4" Foreground="{DynamicResource MutedBrush}" FontSize="10.5" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </CheckBox>
+
+                                <CheckBox x:Name="SoundsCheckBox"
+                                          Grid.Row="0" Grid.Column="2"
+                                          Style="{StaticResource BankTileCheckBox}"
+                                          IsChecked="True"
+                                          Checked="AssetBankCheck_Changed"
+                                          Unchecked="AssetBankCheck_Changed">
+                                    <StackPanel Margin="0,0,18,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 3,10 V 14 M 7,7 V 17 M 11,4 V 20 M 15,8 V 16 M 19,10 V 14"
+                                                  Stroke="{DynamicResource SoundsAccentBrush}"
+                                                  StrokeThickness="1.8"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  Width="13" Height="13"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="Sounds" FontSize="12.5" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text="WAV, OGG, MP3, Mod" Foreground="{DynamicResource MutedBrush}" FontSize="10.5" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </CheckBox>
+
+                                <CheckBox x:Name="PackedDataCheckBox"
+                                          Grid.Row="2" Grid.Column="0"
+                                          Style="{StaticResource BankTileCheckBox}"
+                                          IsChecked="True"
+                                          Checked="AssetBankCheck_Changed"
+                                          Unchecked="AssetBankCheck_Changed">
+                                    <StackPanel Margin="0,0,18,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 12,2 L 21,6.5 V 17.5 L 12,22 L 3,17.5 V 6.5 Z M 3,6.5 L 12,11 L 21,6.5 M 12,11 V 22"
+                                                  Stroke="{DynamicResource PackedAccentBrush}"
+                                                  StrokeThickness="1.6"
+                                                  StrokeLineJoin="Round"
+                                                  Width="13" Height="13"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="Packed Data" FontSize="12.5" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text="Runtime files" Foreground="{DynamicResource MutedBrush}" FontSize="10.5" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </CheckBox>
+
+                                <CheckBox x:Name="ShadersCheckBox"
+                                          Grid.Row="2" Grid.Column="2"
+                                          Style="{StaticResource BankTileCheckBox}"
+                                          IsChecked="True"
+                                          Checked="AssetBankCheck_Changed"
+                                          Unchecked="AssetBankCheck_Changed">
+                                    <StackPanel Margin="0,0,18,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 12,2 L 14.8,9.2 L 22,12 L 14.8,14.8 L 12,22 L 9.2,14.8 L 2,12 L 9.2,9.2 Z"
+                                                  Stroke="{DynamicResource ShadersAccentBrush}"
+                                                  StrokeThickness="1.6"
+                                                  StrokeLineJoin="Round"
+                                                  Width="13" Height="13"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="Shaders" FontSize="12.5" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text=".fx / .fxc + .xml" Foreground="{DynamicResource MutedBrush}" FontSize="10.5" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- 4. PNG Encoding -->
+                        <StackPanel Grid.Row="3" Margin="0,15,0,0">
+                            <Grid Margin="0,0,0,6">
+                                <TextBlock Text="PNG COMPRESSION" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                                <TextBlock Text="Speed vs. size"
+                                           Foreground="{DynamicResource MutedBrush}"
+                                           FontSize="10.5"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                            <ComboBox x:Name="PngCompressionComboBox"
+                                      SelectedIndex="0"
+                                      ToolTip="Sets FUSION_ASSET_LITE_PNG_COMPRESSION for PNG image encoding"
+                                      SelectionChanged="PngCompressionComboBox_SelectionChanged">
+                                <ComboBoxItem Content="LibDeflate Fast (Level 1 — Default)" Tag="fastest" />
+                                <ComboBoxItem Content="LibDeflate Optimal (Level 6 — Smaller)" Tag="optimal" />
+                                <ComboBoxItem Content="Managed Zlib Fast" Tag="zlib_fastest" />
+                                <ComboBoxItem Content="Managed Zlib Optimal" Tag="zlib_optimal" />
+                                <ComboBoxItem Content="Uncompressed (Stored — ~3× size)" Tag="none" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Spacer -->
+                        <Grid Grid.Row="4" />
+
+                        <!-- 5. Docked Action Bar -->
+                        <StackPanel Grid.Row="5" Margin="0,14,0,0">
+                            <TextBlock x:Name="BankWarningTextBlock"
+                                       Text="Enable at least one asset bank above."
+                                       Foreground="{DynamicResource StatusWarningBrush}"
+                                       FontSize="11"
+                                       Margin="0,0,0,7"
+                                       Visibility="Collapsed" />
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="8" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button x:Name="ExtractButton"
+                                        Grid.Column="0"
+                                        Height="42"
+                                        FontSize="13.5"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Click="Extract_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="M 6,4 L 18,12 L 6,20 Z"
+                                              Fill="#FFFFFF"
+                                              Width="11" Height="12"
+                                              Stretch="Uniform"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center" />
+                                        <TextBlock Text="Extract Assets" Foreground="#FFFFFF" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button x:Name="CancelButton"
+                                        Grid.Column="2"
+                                        Height="42"
+                                        MinWidth="88"
+                                        Style="{StaticResource DangerButton}"
+                                        IsEnabled="False"
+                                        Click="Cancel_Click">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="M 5,5 H 15 V 15 H 5 Z"
+                                              Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                              Width="9" Height="9"
+                                              Stretch="Uniform"
+                                              Margin="0,0,6,0"
+                                              VerticalAlignment="Center" />
+                                        <TextBlock Text="Cancel" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
                     </Grid>
                 </Border>
+
+                <!-- RIGHT WORKSPACE: Status, Asset Cards & Activity Log -->
+                <Grid Grid.Column="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Hero Status + Progress Card -->
+                    <Border Grid.Row="0" Style="{StaticResource Card}" Padding="18,15">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="14" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                        <Border x:Name="StatusBadge"
+                                                Background="{DynamicResource WellBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="12"
+                                                Padding="9,3">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse x:Name="StatusDot"
+                                                         Width="7" Height="7"
+                                                         Fill="{DynamicResource StatusIdleBrush}"
+                                                         Margin="0,0,6,0"
+                                                         VerticalAlignment="Center" />
+                                                <TextBlock x:Name="StatusTextBlock"
+                                                           Text="Idle"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border x:Name="EnginePill"
+                                                Background="{DynamicResource ChipBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="12"
+                                                Padding="9,3"
+                                                Margin="8,0,0,0"
+                                                Visibility="Collapsed">
+                                            <TextBlock x:Name="EnginePillTextBlock"
+                                                       Text="PAMU · Fusion 2.5"
+                                                       Foreground="{DynamicResource SubInkBrush}"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <TextBlock x:Name="StageTextBlock"
+                                               Text="Ready to Extract"
+                                               FontSize="19"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="RunDetailTextBlock"
+                                               Text="Load a Fusion .exe or .ccn package to inspect and extract its assets."
+                                               Foreground="{DynamicResource SubInkBrush}"
+                                               FontSize="12"
+                                               Margin="0,2,0,0"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <!-- Elapsed Pill -->
+                                    <Border Background="{DynamicResource WellBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="7"
+                                            Padding="11,6"
+                                            Margin="0,0,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="ELAPSED" Foreground="{DynamicResource MutedBrush}" FontSize="9" FontWeight="Bold" />
+                                            <TextBlock x:Name="ElapsedTextBlock"
+                                                       Text="0.00s"
+                                                       FontFamily="Cascadia Mono, Consolas, Segoe UI"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,1,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Peak RAM Pill -->
+                                    <Border Background="{DynamicResource WellBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="7"
+                                            Padding="11,6"
+                                            Margin="0,0,8,0">
+                                        <StackPanel>
+                                            <TextBlock Text="PEAK RAM" Foreground="{DynamicResource MutedBrush}" FontSize="9" FontWeight="Bold" />
+                                            <TextBlock x:Name="RamTextBlock"
+                                                       Text="—"
+                                                       FontFamily="Cascadia Mono, Consolas, Segoe UI"
+                                                       FontSize="13"
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,1,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Button x:Name="OpenOutputButton"
+                                            Height="42"
+                                            Padding="13,0"
+                                            IsEnabled="False"
+                                            ToolTip="Open extracted folder or reveal .zip archive in Explorer"
+                                            Click="OpenOutput_Click">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 14,4 H 20 V 10 M 10,14 L 20,4 M 18,14 V 19 A 1,1 0 0 1 17,20 H 5 A 1,1 0 0 1 4,19 V 7 A 1,1 0 0 1 5,6 H 10"
+                                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                  StrokeThickness="1.7"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  Width="12" Height="12"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,7,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock x:Name="OpenOutputTextBlock"
+                                                       Text="Open Output"
+                                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <ProgressBar x:Name="ExtractionProgressBar"
+                                             Grid.Column="0"
+                                             Height="8"
+                                             Minimum="0"
+                                             Maximum="100"
+                                             Value="0"
+                                             VerticalAlignment="Center" />
+
+                                <TextBlock x:Name="ProgressPercentTextBlock"
+                                           Grid.Column="2"
+                                           Text="Ready"
+                                           Foreground="{DynamicResource SubInkBrush}"
+                                           FontFamily="Cascadia Mono, Consolas, Segoe UI"
+                                           FontSize="11.5"
+                                           FontWeight="SemiBold"
+                                           MinWidth="46"
+                                           TextAlignment="Right"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <!-- 4 Cohesive Asset Telemetry Cards -->
+                    <Grid Grid.Row="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="10" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Images Card -->
+                        <Border Grid.Column="0" Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="3" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Margin="13,0,13,0" CornerRadius="0,0,2,2" Background="{DynamicResource ImagesAccentBrush}" />
+                                <StackPanel Grid.Row="1" Margin="13,9,13,11">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 3,5 H 19 V 19 H 3 Z M 7,15 L 10.5,11 L 13.5,14 L 16,11.5 L 19,15"
+                                                  Stroke="{DynamicResource ImagesAccentBrush}"
+                                                  StrokeThickness="1.7"
+                                                  Width="12" Height="12"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="IMAGES" Style="{StaticResource StatLabel}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="ImagesStateTextBlock" Text="Queued" Foreground="{DynamicResource MutedBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <TextBlock x:Name="ImagesSummaryTextBlock" Text="—" Style="{StaticResource StatValue}" Margin="0,5,0,1" />
+                                    <TextBlock x:Name="ImagesDetailTextBlock" Text="PNG RGBA / RGB" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Sounds Card -->
+                        <Border Grid.Column="2" Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="3" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Margin="13,0,13,0" CornerRadius="0,0,2,2" Background="{DynamicResource SoundsAccentBrush}" />
+                                <StackPanel Grid.Row="1" Margin="13,9,13,11">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 3,10 V 14 M 7,7 V 17 M 11,4 V 20 M 15,8 V 16 M 19,10 V 14"
+                                                  Stroke="{DynamicResource SoundsAccentBrush}"
+                                                  StrokeThickness="1.8"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeEndLineCap="Round"
+                                                  Width="12" Height="12"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="SOUNDS" Style="{StaticResource StatLabel}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="SoundsStateTextBlock" Text="Queued" Foreground="{DynamicResource MutedBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <TextBlock x:Name="SoundsSummaryTextBlock" Text="—" Style="{StaticResource StatValue}" Margin="0,5,0,1" />
+                                    <TextBlock x:Name="SoundsDetailTextBlock" Text="WAV / OGG / MP3" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Packed Data Card -->
+                        <Border Grid.Column="4" Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="3" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Margin="13,0,13,0" CornerRadius="0,0,2,2" Background="{DynamicResource PackedAccentBrush}" />
+                                <StackPanel Grid.Row="1" Margin="13,9,13,11">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 12,2 L 21,6.5 V 17.5 L 12,22 L 3,17.5 V 6.5 Z M 3,6.5 L 12,11 L 21,6.5 M 12,11 V 22"
+                                                  Stroke="{DynamicResource PackedAccentBrush}"
+                                                  StrokeThickness="1.6"
+                                                  Width="12" Height="12"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="PACKED" Style="{StaticResource StatLabel}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="PackedStateTextBlock" Text="Queued" Foreground="{DynamicResource MutedBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <TextBlock x:Name="PackedSummaryTextBlock" Text="—" Style="{StaticResource StatValue}" Margin="0,5,0,1" />
+                                    <TextBlock x:Name="PackedDetailTextBlock" Text="Embedded files" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Shaders Card -->
+                        <Border Grid.Column="6" Style="{StaticResource Card}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="3" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Margin="13,0,13,0" CornerRadius="0,0,2,2" Background="{DynamicResource ShadersAccentBrush}" />
+                                <StackPanel Grid.Row="1" Margin="13,9,13,11">
+                                    <Grid>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M 12,2 L 14.8,9.2 L 22,12 L 14.8,14.8 L 12,22 L 9.2,14.8 L 2,12 L 9.2,9.2 Z"
+                                                  Stroke="{DynamicResource ShadersAccentBrush}"
+                                                  StrokeThickness="1.6"
+                                                  Width="12" Height="12"
+                                                  Stretch="Uniform"
+                                                  Margin="0,0,6,0"
+                                                  VerticalAlignment="Center" />
+                                            <TextBlock Text="SHADERS" Style="{StaticResource StatLabel}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="ShadersStateTextBlock" Text="Queued" Foreground="{DynamicResource MutedBrush}" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                    <TextBlock x:Name="ShadersSummaryTextBlock" Text="—" Style="{StaticResource StatValue}" Margin="0,5,0,1" />
+                                    <TextBlock x:Name="ShadersDetailTextBlock" Text="FX / FXC + XML" Foreground="{DynamicResource MutedBrush}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <!-- Activity Log Console Card -->
+                    <Border Grid.Row="4" Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="42" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Console Header Toolbar -->
+                            <Border Grid.Row="0"
+                                    Background="{DynamicResource CardBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="0,0,0,1"
+                                    CornerRadius="9,9,0,0"
+                                    Padding="14,0">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Data="M 4,17 L 10,11 L 4,5 M 12,19 H 20"
+                                              Stroke="{DynamicResource AccentBrush}"
+                                              StrokeThickness="1.8"
+                                              StrokeStartLineCap="Round"
+                                              StrokeEndLineCap="Round"
+                                              StrokeLineJoin="Round"
+                                              Width="13" Height="11"
+                                              Stretch="Uniform"
+                                              Margin="0,0,8,0"
+                                              VerticalAlignment="Center" />
+                                        <TextBlock Text="ACTIVITY LOG" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                                        <Border Background="{DynamicResource WellBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="10"
+                                                Padding="7,1.5"
+                                                Margin="8,0,0,0"
+                                                VerticalAlignment="Center">
+                                            <TextBlock x:Name="LogCountTextBlock"
+                                                       Text="0 lines"
+                                                       Foreground="{DynamicResource MutedBrush}"
+                                                       FontSize="10.5"
+                                                       FontWeight="SemiBold" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <!-- Log Filter -->
+                                        <Border Background="{DynamicResource WellBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="2"
+                                                Margin="0,0,8,0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <RadioButton x:Name="LogFilterAllRadio"
+                                                             Style="{StaticResource FilterPillRadio}"
+                                                             Content="All"
+                                                             IsChecked="True"
+                                                             Checked="LogFilter_Changed" />
+                                                <RadioButton x:Name="LogFilterIssuesRadio"
+                                                             Style="{StaticResource FilterPillRadio}"
+                                                             Checked="LogFilter_Changed">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Issues" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" />
+                                                        <Border x:Name="IssuesCountBadge"
+                                                                Background="{DynamicResource DangerBgBrush}"
+                                                                BorderBrush="{DynamicResource DangerBorderBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="7"
+                                                                Padding="5,0"
+                                                                Margin="5,0,0,0"
+                                                                Visibility="Collapsed">
+                                                            <TextBlock x:Name="IssuesCountTextBlock"
+                                                                       Text="0"
+                                                                       Foreground="{DynamicResource DangerTextBrush}"
+                                                                       FontSize="9.5"
+                                                                       FontWeight="Bold" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </RadioButton>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Button x:Name="CopyLogButton"
+                                                Style="{StaticResource CompactButton}"
+                                                Margin="0,0,6,0"
+                                                IsEnabled="False"
+                                                Click="CopyLog_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="M 9,9 H 19 V 19 H 9 Z M 5,15 H 4 A 1,1 0 0 1 3,14 V 4 A 1,1 0 0 1 4,3 H 14 A 1,1 0 0 1 15,4 V 5"
+                                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                      StrokeThickness="1.5"
+                                                      StrokeLineJoin="Round"
+                                                      Width="11" Height="11"
+                                                      Stretch="Uniform"
+                                                      Margin="0,0,5,0"
+                                                      VerticalAlignment="Center" />
+                                                <TextBlock Text="Copy" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <Button x:Name="ClearLogButton"
+                                                Style="{StaticResource CompactButton}"
+                                                IsEnabled="False"
+                                                Click="ClearLog_Click">
+                                            <TextBlock Text="Clear" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Console Surface -->
+                            <Border Grid.Row="1" Background="{DynamicResource LogBgBrush}" CornerRadius="0,0,9,9">
+                                <Grid>
+                                    <RichTextBox x:Name="LogRichTextBox"
+                                                 IsReadOnly="True"
+                                                 IsDocumentEnabled="False"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 HorizontalScrollBarVisibility="Auto"
+                                                 Padding="14,8"
+                                                 FontFamily="Cascadia Mono, Consolas"
+                                                 FontSize="12"
+                                                 Background="Transparent"
+                                                 Foreground="{DynamicResource LogTextBrush}"
+                                                 BorderThickness="0"
+                                                 SelectionBrush="{DynamicResource AccentBrush}"
+                                                 CaretBrush="{DynamicResource LogTextBrush}">
+                                        <RichTextBox.Resources>
+                                            <Style TargetType="Paragraph">
+                                                <Setter Property="Margin" Value="0,0,0,1" />
+                                                <Setter Property="LineHeight" Value="15.5" />
+                                            </Style>
+                                        </RichTextBox.Resources>
+                                    </RichTextBox>
+
+                                    <!-- Intentional Console Empty State -->
+                                    <StackPanel x:Name="LogEmptyState"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Margin="28">
+                                        <Border Width="44" Height="44"
+                                                CornerRadius="11"
+                                                Background="#141B22"
+                                                BorderBrush="#232E3A"
+                                                BorderThickness="1"
+                                                HorizontalAlignment="Center"
+                                                Margin="0,0,0,12">
+                                            <Canvas Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Polygon Points="11,2 20,6.8 11,11.6 2,6.8" Fill="#1EC191" />
+                                                <Polygon Points="2,7.4 10.4,12 10.4,19.8 2,15.2" Fill="#169872" />
+                                                <Polygon Points="20,7.4 11.6,12 11.6,19.8 20,15.2" Fill="#0F6F53" />
+                                            </Canvas>
+                                        </Border>
+
+                                        <TextBlock Text="No extraction activity yet"
+                                                   Foreground="#E5ECF3"
+                                                   FontSize="14.5"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Center" />
+                                        <TextBlock Text="Drop a Clickteam Fusion .exe or .ccn file anywhere in this window, or browse for a package to stream out images, sounds, packed runtime files, and shaders."
+                                                   Foreground="#8594A5"
+                                                   FontSize="12"
+                                                   TextWrapping="Wrap"
+                                                   TextAlignment="Center"
+                                                   MaxWidth="390"
+                                                   Margin="0,5,0,14" />
+
+                                        <Button HorizontalAlignment="Center"
+                                                Height="32"
+                                                Padding="14,0"
+                                                Background="#18222C"
+                                                BorderBrush="#2A3847"
+                                                Foreground="#E5ECF3"
+                                                Click="BrowseInput_Click">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="M 3,6 A 2,2 0 0 1 5,4 H 9.5 L 11.5,6.5 H 19 A 2,2 0 0 1 21,8.5 V 18 A 2,2 0 0 1 19,20 H 5 A 2,2 0 0 1 3,18 Z"
+                                                      Stroke="#1EC191"
+                                                      StrokeThickness="1.6"
+                                                      Width="13" Height="12"
+                                                      Stretch="Uniform"
+                                                      Margin="0,0,7,0"
+                                                      VerticalAlignment="Center" />
+                                                <TextBlock Text="Browse Package..." Foreground="#E5ECF3" FontSize="12" FontWeight="SemiBold" />
+                                            </StackPanel>
+                                        </Button>
+
+                                        <!-- Recent Packages (shown only if available) -->
+                                        <StackPanel x:Name="RecentPackagesPanel" Margin="0,16,0,0" Visibility="Collapsed">
+                                            <TextBlock Text="RECENT PACKAGES"
+                                                       Foreground="#647485"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"
+                                                       HorizontalAlignment="Center"
+                                                       Margin="0,0,0,6" />
+                                            <WrapPanel x:Name="RecentPackagesWrapPanel" HorizontalAlignment="Center" MaxWidth="420" />
+                                        </StackPanel>
+
+                                        <!-- Keyboard Hints -->
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0">
+                                            <Border Background="#131920" BorderBrush="#232D38" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,5,0">
+                                                <TextBlock Text="Ctrl+O" Foreground="#98A7B7" FontFamily="Cascadia Mono, Consolas" FontSize="10" />
+                                            </Border>
+                                            <TextBlock Text="Browse" Foreground="#697889" FontSize="11" VerticalAlignment="Center" Margin="0,0,14,0" />
+
+                                            <Border Background="#131920" BorderBrush="#232D38" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,5,0">
+                                                <TextBlock Text="F5" Foreground="#98A7B7" FontFamily="Cascadia Mono, Consolas" FontSize="10" />
+                                            </Border>
+                                            <TextBlock Text="Extract" Foreground="#697889" FontSize="11" VerticalAlignment="Center" Margin="0,0,14,0" />
+
+                                            <Border Background="#131920" BorderBrush="#232D38" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,5,0">
+                                                <TextBlock Text="Esc" Foreground="#98A7B7" FontFamily="Cascadia Mono, Consolas" FontSize="10" />
+                                            </Border>
+                                            <TextBlock Text="Cancel" Foreground="#697889" FontSize="11" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Grid>
+
+            <!-- Drag & Drop Overlay -->
+            <Border x:Name="DropOverlay"
+                    Grid.RowSpan="2"
+                    Background="{DynamicResource DropOverlayBgBrush}"
+                    Visibility="Collapsed"
+                    IsHitTestVisible="False">
+                <Border MaxWidth="440"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource AccentBrush}"
+                        BorderThickness="2"
+                        CornerRadius="14"
+                        Padding="34,26">
+                    <StackPanel HorizontalAlignment="Center">
+                        <Border Width="48" Height="48"
+                                CornerRadius="12"
+                                Background="{DynamicResource AccentSoftBrush}"
+                                BorderBrush="{DynamicResource AccentBorderBrush}"
+                                BorderThickness="1"
+                                HorizontalAlignment="Center"
+                                Margin="0,0,0,14">
+                            <Path Data="M 12,3 V 15 M 7,8 L 12,3 L 17,8 M 4,17 V 19 A 2,2 0 0 0 6,21 H 18 A 2,2 0 0 0 20,19 V 17"
+                                  Stroke="{DynamicResource AccentHoverBrush}"
+                                  StrokeThickness="2"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Width="22" Height="22"
+                                  Stretch="Uniform" />
+                        </Border>
+                        <TextBlock Text="Drop Fusion Package"
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock x:Name="DropOverlayFileTextBlock"
+                                   Text="Release to load .exe or .ccn package"
+                                   Foreground="{DynamicResource SubInkBrush}"
+                                   FontSize="12.5"
+                                   Margin="0,4,0,0"
+                                   HorizontalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Border>
+            </Border>
         </Grid>
-    </Grid>
+    </Border>
 </Window>
